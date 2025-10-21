@@ -2,6 +2,7 @@
 CLAUDE.md
 *.pdf
 .claude/
+.context/
 
 # Binarios
 /app
