@@ -6,7 +6,7 @@ RUN go mod download
 
 COPY . .
 # Binario estático linux/amd64 -> ideal para contenedores
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o app .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o app ./cmd/api
 
 # ---------- Fase de run (imagen final, mínima y segura) ----------
 FROM gcr.io/distroless/base-debian12

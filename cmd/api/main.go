@@ -1,52 +1,40 @@
 package main
 
 import (
-	"net/http"
-	"os"
-	"time"
+    "os"
 
-	"github.com/gin-gonic/gin"
+    "github.com/gin-gonic/gin"
+    "uniflow-api/internal/application"
+    "uniflow-api/internal/infrastructure/handlers"
 )
 
-type Task struct {
-	ID          string     `json:"id"`
-	Title       string     `json:"title"`
-	Status      string     `json:"status"`
-	Priority    string     `json:"priority"`
-	DueDate     *time.Time `json:"dueDate,omitempty"`
-	Tags        []string   `json:"tags,omitempty"`
-	Description string     `json:"description,omitempty"`
-}
-
 func main() {
-	// Puerto: por defecto 8080. Si existe PORT en env, lo usamos (útil para contenedores).
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+    // Configurar puerto
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080"
+    }
 
-	r := gin.Default()
+    // Configurar modo Gin
+    if os.Getenv("GIN_MODE") == "" {
+        gin.SetMode(gin.DebugMode)
+    }
 
-	// GET /health -> quick check
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status": "ok",
-			"time":   time.Now().UTC(),
-		})
-	})
+    // Inicializar servicios
+    taskService := application.NewTaskService()
 
-	// GET /tasks -> datos de prueba (mock)
-	r.GET("/tasks", func(c *gin.Context) {
-		now := time.Now()
-		tasks := []Task{
-			{ID: "t-001", Title: "Demo: tarea de ejemplo", Status: "todo", Priority: "medium", DueDate: &now, Tags: []string{"demo"}},
-			{ID: "t-002", Title: "Otra tarea", Status: "in-progress", Priority: "high"},
-		}
-		c.JSON(http.StatusOK, tasks)
-	})
+    // Crear router
+    r := gin.Default()
 
-	// Levanta el server
-	if err := r.Run(":" + port); err != nil {
-		panic(err)
-	}
+    // Crear handlers
+    taskHandler := handlers.NewTaskHandler(taskService)
+
+    // Rutas
+    r.GET("/health", handlers.HealthHandler)
+    r.GET("/tasks", taskHandler.GetTasks)
+
+    // Levantar servidor
+    if err := r.Run(":" + port); err != nil {
+        panic(err)
+    }
 }

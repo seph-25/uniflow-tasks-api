@@ -1,3 +1,39 @@
+# IA
 CLAUDE.md
 *.pdf
 .claude/
+
+# Binarios
+/app
+/uniflow-api
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Directorios Go
+/vendor/
+/.cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Ambiente
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+dist/
+build/
+
+# Logs
+*.log
+
+# Temporal
+tmp/
