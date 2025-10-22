@@ -1,74 +1,136 @@
 package application
 
 import (
-    "context"
-    "time"
-    "uniflow-api/internal/domain"
+	"context"
+	"uniflow-api/internal/application/ports"
+	"uniflow-api/internal/domain"
 )
 
 // TaskService coordina casos de uso relacionados con tareas
+// Ahora depende de una abstracción (TaskRepository) en lugar de datos hardcodeados
 type TaskService struct {
-    // En Fase 1A: sin repositorio (mocks)
-    // En Fase 1B: aquí iría el TaskRepository
+	repo ports.TaskRepository
 }
 
 // NewTaskService crea una nueva instancia de TaskService
-func NewTaskService() *TaskService {
-    return &TaskService{}
+// Inyecta el repositorio (puede ser MongoDB, PostgreSQL, etc.)
+func NewTaskService(repo ports.TaskRepository) *TaskService {
+	return &TaskService{
+		repo: repo,
+	}
 }
 
-// GetAllTasks retorna todas las tareas del usuario (mock para Fase 1A)
+// GetAllTasks obtiene todas las tareas del usuario desde la BD real
 func (ts *TaskService) GetAllTasks(ctx context.Context, userID string) ([]domain.Task, error) {
-    select {
-    case <-ctx.Done():
-        return nil, ctx.Err()
-    default:
-    }
+	// Validar que el contexto no fue cancelado
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
 
-    // Mock data para Fase 1A
-    now := time.Now()
-    tasks := []domain.Task{
-        {
-            ID:                 "task-001",
-            UserID:             userID,
-            Title:              "Proyecto Programado I - UniFlow",
-            Description:        "Desarrollar aplicación web con React y Azure",
-            SubjectID:          "subject-ic-6821",
-            PeriodID:           "period-2025-01",
-            DueDate:            now.AddDate(0, 0, 20),
-            Status:             domain.StatusInProgress,
-            Priority:           domain.PriorityHigh,
-            Type:               domain.TypeAssignment,
-            EstimatedTimeHours: 40,
-            Tags:               []string{"proyecto", "frontend", "azure"},
-            IsGroupWork:        false,
-            GroupMembers:       []string{},
-            Attachments:        []string{},
-            CreatedAt:          now.AddDate(0, 0, -5),
-            UpdatedAt:          now,
-            CompletedAt:        nil,
-        },
-        {
-            ID:                 "task-002",
-            UserID:             userID,
-            Title:              "Laboratorio 3 - Consultas SQL",
-            Description:        "Implementar consultas con JOIN y subconsultas",
-            SubjectID:          "subject-ic-4302",
-            PeriodID:           "period-2025-01",
-            DueDate:            now.AddDate(0, 0, 10),
-            Status:             domain.StatusTodo,
-            Priority:           domain.PriorityMedium,
-            Type:               domain.TypeLab,
-            EstimatedTimeHours: 3,
-            Tags:               []string{"lab", "sql", "database"},
-            IsGroupWork:        false,
-            GroupMembers:       []string{},
-            Attachments:        []string{},
-            CreatedAt:          now.AddDate(0, 0, -3),
-            UpdatedAt:          now.AddDate(0, 0, -3),
-            CompletedAt:        nil,
-        },
-    }
+	// Llamar al repositorio (ahora MongoDB en lugar de mocks)
+	tasks, err := ts.repo.GetAll(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
 
-    return tasks, nil
+	return tasks, nil
+}
+
+// GetTaskByID obtiene una tarea específica por ID
+func (ts *TaskService) GetTaskByID(ctx context.Context, taskID, userID string) (*domain.Task, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	task, err := ts.repo.GetByID(ctx, taskID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return task, nil
+}
+
+// GetTasksByStatus obtiene tareas filtrando por estado
+func (ts *TaskService) GetTasksByStatus(ctx context.Context, userID, status string) ([]domain.Task, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	tasks, err := ts.repo.GetByUserAndStatus(ctx, userID, status)
+	if err != nil {
+		return nil, err
+	}
+
+	return tasks, nil
+}
+
+// CreateTask crea una nueva tarea
+func (ts *TaskService) CreateTask(ctx context.Context, task *domain.Task) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	// Validar que la tarea es válida
+	if err := task.IsValid(); err != nil {
+		return err
+	}
+
+	// Persistir en BD
+	err := ts.repo.Create(ctx, task)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateTask actualiza una tarea existente
+func (ts *TaskService) UpdateTask(ctx context.Context, task *domain.Task) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	// Validar que puede ser modificada
+	if err := task.CanBeModified(); err != nil {
+		return err
+	}
+
+	// Validar estructura
+	if err := task.IsValid(); err != nil {
+		return err
+	}
+
+	// Persistir cambios
+	err := ts.repo.Update(ctx, task)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DeleteTask elimina una tarea
+func (ts *TaskService) DeleteTask(ctx context.Context, taskID, userID string) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	err := ts.repo.Delete(ctx, taskID, userID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
