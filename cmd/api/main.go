@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"uniflow-api/internal/application"
@@ -15,6 +17,10 @@ import (
 )
 
 func main() {
+	// Cargar variables de entorno desde .env
+	if err := godotenv.Load(); err != nil {
+		log.Println("No se encontró archivo .env, usando variables de entorno del sistema")
+	}
 	// Configurar puerto
 	port := os.Getenv("PORT")
 	if port == "" {

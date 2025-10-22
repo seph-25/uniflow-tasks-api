@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // MongoTaskRepository implementa TaskRepository usando MongoDB
@@ -72,9 +73,8 @@ func (r *MongoTaskRepository) GetAll(ctx context.Context, userID string) ([]doma
 	filter := bson.M{
 		"userId": userID,
 	}
-
 	// Opciones: ordenar por dueDate ascendente
-	opts := &mongo.FindOptions{}
+	opts := options.Find()
 	opts.SetSort(bson.M{"dueDate": 1})
 
 	cursor, err := r.collection.Find(ctx, filter, opts)
@@ -109,7 +109,7 @@ func (r *MongoTaskRepository) GetByUserAndStatus(ctx context.Context, userID, st
 		"status": status,
 	}
 
-	opts := &mongo.FindOptions{}
+	opts := options.Find()
 	opts.SetSort(bson.M{"dueDate": 1})
 
 	cursor, err := r.collection.Find(ctx, filter, opts)
