@@ -30,33 +30,24 @@ func (r *MongoTaskRepository) Create(ctx context.Context, task *domain.Task) err
 		task.ID = primitive.NewObjectID().Hex()
 	}
 
-	result, err := r.collection.InsertOne(ctx, task)
+	_, err := r.collection.InsertOne(ctx, task)
 	if err != nil {
 		return fmt.Errorf("error al crear tarea: %w", err)
 	}
-
-	// Actualizar el ID en la tarea (por si fue generado)
-	task.ID = result.InsertedID.(primitive.ObjectID).Hex()
 
 	return nil
 }
 
 // GetByID obtiene una tarea específica por ID y verifica pertenencia al usuario
 func (r *MongoTaskRepository) GetByID(ctx context.Context, taskID, userID string) (*domain.Task, error) {
-	// Convertir string ID a ObjectID
-	objID, err := primitive.ObjectIDFromHex(taskID)
-	if err != nil {
-		return nil, fmt.Errorf("ID inválido: %w", err)
-	}
-
-	// Filtro: tarea debe pertenecer al usuario Y tener ese ID
+	// Filtro: tarea debe pertenecer al usuario Y tener ese ID (como string)
 	filter := bson.M{
-		"_id":    objID,
+		"_id":    taskID,
 		"userId": userID,
 	}
 
 	var task domain.Task
-	err = r.collection.FindOne(ctx, filter).Decode(&task)
+	err := r.collection.FindOne(ctx, filter).Decode(&task)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, fmt.Errorf("tarea no encontrada")
@@ -138,14 +129,9 @@ func (r *MongoTaskRepository) Update(ctx context.Context, task *domain.Task) err
 		return fmt.Errorf("no se puede actualizar: %w", err)
 	}
 
-	objID, err := primitive.ObjectIDFromHex(task.ID)
-	if err != nil {
-		return fmt.Errorf("ID inválido: %w", err)
-	}
-
-	// Filtro: asegurarse que pertenece al usuario
+	// Filtro: asegurarse que pertenece al usuario (usando string ID)
 	filter := bson.M{
-		"_id":    objID,
+		"_id":    task.ID,
 		"userId": task.UserID,
 	}
 
@@ -174,13 +160,8 @@ func (r *MongoTaskRepository) Delete(ctx context.Context, taskID, userID string)
 		return err
 	}
 
-	objID, err := primitive.ObjectIDFromHex(taskID)
-	if err != nil {
-		return fmt.Errorf("ID inválido: %w", err)
-	}
-
 	filter := bson.M{
-		"_id":    objID,
+		"_id":    taskID,
 		"userId": userID,
 	}
 

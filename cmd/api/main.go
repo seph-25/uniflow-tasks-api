@@ -83,7 +83,25 @@ func main() {
 
 	// Rutas
 	r.GET("/health", handlers.HealthHandler)
+
+	// GET - Leer tareas
 	r.GET("/tasks", taskHandler.GetTasks)
+	r.GET("/tasks/:id", taskHandler.GetTaskByID)
+
+	// POST - Crear tarea
+	r.POST("/tasks", taskHandler.CreateTask)
+
+	// PUT - Actualizar tarea completa
+	r.PUT("/tasks/:id", taskHandler.UpdateTask)
+
+	// PATCH - Cambiar estado
+	r.PATCH("/tasks/:id/status", taskHandler.UpdateTaskStatus)
+
+	// PATCH - Completar tarea
+	r.PATCH("/tasks/:id/complete", taskHandler.CompleteTask)
+
+	// DELETE - Eliminar tarea
+	r.DELETE("/tasks/:id", taskHandler.DeleteTask)
 
 	// Levantar servidor
 	fmt.Printf("Servidor escuchando en puerto %s\n", port)
