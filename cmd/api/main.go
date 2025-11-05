@@ -11,102 +11,87 @@ import (
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
 	"uniflow-api/internal/application"
+	ports "uniflow-api/internal/application/ports"
 	"uniflow-api/internal/infrastructure/handlers"
-	"uniflow-api/internal/infrastructure/persistence"
+	"uniflow-api/internal/infrastructure/persistence"          // Mongo repo
+	mem "uniflow-api/internal/infrastructure/persistence/memory" // Repo en memoria
 )
 
 func main() {
-	// Cargar variables de entorno desde .env
+	// 1) Cargar .env si existe
 	if err := godotenv.Load(); err != nil {
 		log.Println("No se encontró archivo .env, usando variables de entorno del sistema")
 	}
-	// Configurar puerto
+
+	// 2) Puerto
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	// Configurar modo Gin
+	// 3) Modo Gin
 	if os.Getenv("GIN_MODE") == "" {
 		gin.SetMode(gin.DebugMode)
 	}
 
-	// Obtener MONGO_URI del ambiente
+	// 4) Crear el repositorio (memoria por defecto si no hay MONGO_URI)
 	mongoURI := os.Getenv("MONGO_URI")
+	var repo ports.TaskRepository
+
 	if mongoURI == "" {
-		fmt.Println("ERROR: MONGO_URI no configurada en variables de entorno")
-		os.Exit(1)
+		log.Println("MONGO_URI no configurada → usando repositorio EN MEMORIA")
+		repo = mem.NewRepo()
+	} else {
+		log.Println("Inicializando repositorio Mongo…")
+
+		mongoDB := os.Getenv("MONGO_DB")
+		if mongoDB == "" {
+			mongoDB = "uniflowdb" // default sensato
+		}
+
+		// Conectar a Mongo con timeout
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
+		if err != nil {
+			log.Fatalf("ERROR al conectar a MongoDB: %v", err)
+		}
+		defer client.Disconnect(context.Background())
+
+		// Ping
+		if err := client.Ping(ctx, nil); err != nil {
+			log.Fatalf("ERROR al hacer ping a MongoDB: %v", err)
+		}
+		log.Println("✅ Conectado a MongoDB")
+
+		// Selección de colección y repo
+		coll := client.Database(mongoDB).Collection("tasks")
+		repo = persistence.NewMongoTaskRepository(coll)
 	}
 
-	// Obtener nombre de base de datos del ambiente
-	mongoDB := os.Getenv("MONGO_DB")
-	if mongoDB == "" {
-		mongoDB = "my-culster-name-ds2025" // Default si no se proporciona
-	}
-
-	// Conectar a MongoDB con contexto y timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
-	if err != nil {
-		fmt.Printf("ERROR al conectar a MongoDB: %v\n", err)
-		os.Exit(1)
-	}
-	defer client.Disconnect(context.Background())
-
-	// Verificar conexión (ping)
-	err = client.Ping(ctx, nil)
-	if err != nil {
-		fmt.Printf("ERROR al hacer ping a MongoDB: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Println("✅ Conectado a MongoDB exitosamente")
-
-	// Seleccionar base de datos y colección
-	database := client.Database(mongoDB)
-	tasksCollection := database.Collection("tasks")
-
-	// Crear repositorio MongoDB
-	taskRepo := persistence.NewMongoTaskRepository(tasksCollection)
-
-	// Crear servicio CON inyección del repositorio
-	taskService := application.NewTaskService(taskRepo)
-
-	// Crear router
+	// 5) Servicio + Router + Handlers
+	taskService := application.NewTaskService(repo)
 	r := gin.Default()
 
-	// Crear handlers
 	taskHandler := handlers.NewTaskHandler(taskService)
 
-	// Rutas
+	// 6) Rutas
 	r.GET("/health", handlers.HealthHandler)
 
-	// GET - Leer tareas
 	r.GET("/tasks", taskHandler.GetTasks)
 	r.GET("/tasks/:id", taskHandler.GetTaskByID)
-
-	// POST - Crear tarea
 	r.POST("/tasks", taskHandler.CreateTask)
-
-	// PUT - Actualizar tarea completa
 	r.PUT("/tasks/:id", taskHandler.UpdateTask)
-
-	// PATCH - Cambiar estado
 	r.PATCH("/tasks/:id/status", taskHandler.UpdateTaskStatus)
-
-	// PATCH - Completar tarea
 	r.PATCH("/tasks/:id/complete", taskHandler.CompleteTask)
-
-	// DELETE - Eliminar tarea
 	r.DELETE("/tasks/:id", taskHandler.DeleteTask)
 
-	// Levantar servidor
+	// 7) Levantar server
 	fmt.Printf("Servidor escuchando en puerto %s\n", port)
 	if err := r.Run(":" + port); err != nil {
-		fmt.Printf("ERROR al levantar servidor: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("ERROR al levantar servidor: %v", err)
 	}
 }

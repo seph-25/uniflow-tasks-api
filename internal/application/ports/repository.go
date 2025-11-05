@@ -9,6 +9,8 @@ import (
 // Esta interfaz permite que TaskService sea agnóstico de la implementación
 // (puede ser MongoDB, PostgreSQL, etc.)
 type TaskRepository interface {
+
+	
 	// Create inserta una nueva tarea en la BD
 	Create(ctx context.Context, task *domain.Task) error
 
