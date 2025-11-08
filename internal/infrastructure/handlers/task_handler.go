@@ -28,9 +28,10 @@ func (th *TaskHandler) GetTasks(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	userID := c.GetString("userID")
+	userID := c.GetString("userID") // Ya viene validado del middleware JWT
 	if userID == "" {
-		userID = "user-demo"
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+		return
 	}
 
 	tasks, err := th.taskService.GetAllTasks(ctx, userID)
@@ -70,9 +71,10 @@ func (th *TaskHandler) CreateTask(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetString("userID")
+	userID := c.GetString("userID") // Ya viene validado del middleware JWT
 	if userID == "" {
-		userID = "user-demo"
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+		return
 	}
 
 	task := &domain.Task{
@@ -107,9 +109,10 @@ func (th *TaskHandler) GetTaskByID(c *gin.Context) {
 	defer cancel()
 
 	taskID := c.Param("id")
-	userID := c.GetString("userID")
+	userID := c.GetString("userID") // Ya viene validado del middleware JWT
 	if userID == "" {
-		userID = "user-demo"
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+		return
 	}
 
 	task, err := th.taskService.GetTaskByID(ctx, taskID, userID)
@@ -127,9 +130,10 @@ func (th *TaskHandler) UpdateTask(c *gin.Context) {
 	defer cancel()
 
 	taskID := c.Param("id")
-	userID := c.GetString("userID")
+	userID := c.GetString("userID") // Ya viene validado del middleware JWT
 	if userID == "" {
-		userID = "user-demo"
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+		return
 	}
 
 	var req requests.UpdateTaskRequest
@@ -173,9 +177,10 @@ func (th *TaskHandler) UpdateTaskStatus(c *gin.Context) {
 	defer cancel()
 
 	taskID := c.Param("id")
-	userID := c.GetString("userID")
+	userID := c.GetString("userID") // Ya viene validado del middleware JWT
 	if userID == "" {
-		userID = "user-demo"
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+		return
 	}
 
 	var req requests.UpdateTaskStatusRequest
@@ -212,9 +217,10 @@ func (th *TaskHandler) DeleteTask(c *gin.Context) {
 	defer cancel()
 
 	taskID := c.Param("id")
-	userID := c.GetString("userID")
+	userID := c.GetString("userID") // Ya viene validado del middleware JWT
 	if userID == "" {
-		userID = "user-demo"
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+		return
 	}
 
 	if err := th.taskService.DeleteTask(ctx, taskID, userID); err != nil {
@@ -231,9 +237,10 @@ func (th *TaskHandler) CompleteTask(c *gin.Context) {
 	defer cancel()
 
 	taskID := c.Param("id")
-	userID := c.GetString("userID")
+	userID := c.GetString("userID") // Ya viene validado del middleware JWT
 	if userID == "" {
-		userID = "user-demo"
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+		return
 	}
 
 	var req requests.UpdateTaskCompleteRequest
