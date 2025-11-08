@@ -11,6 +11,10 @@ CLAUDE.md
 *.dll
 *.so
 *.dylib
+api.exe
+
+# Configuración de Azure (outputs)
+container-config.json
 
 # Directorios Go
 /vendor/
@@ -38,3 +42,5 @@ build/
 
 # Temporal
 tmp/
+
+GITHUB_SECRETS.md
