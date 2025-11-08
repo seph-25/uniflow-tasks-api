@@ -3,33 +3,9 @@ package ports
 import (
 	"context"
 	"time"
-	
+
 	"uniflow-api/internal/domain"
 )
-
-
-// Filtros genéricos para listados/búsquedas
-type TaskFilter struct {
-	UserID    string    // obligatorio para aislar datos por usuario
-	Status    string    // todo | in-progress | done | cancelled (opcional)
-	SubjectID string    // opcional
-	PeriodID  string    // opcional
-	From      *time.Time // ventana inicial (opcional)
-	To        *time.Time // ventana final (opcional)
-	Query     string    // texto libre (3B) opcional
-	Limit     int       // paginación
-	Offset    int       // paginación
-}
-
-// Metadatos de paginación
-type PageInfo struct {
-	Total      int64
-	Page       int
-	Limit      int
-	TotalPages int
-	HasNext    bool
-	HasPrev    bool
-}
 
 // TaskRepository define las operaciones de persistencia para tareas
 // Esta interfaz permite que TaskService sea agnóstico de la implementación
@@ -57,13 +33,13 @@ type TaskRepository interface {
 	Delete(ctx context.Context, taskID, userID string) error
 
 	// Listado con filtros y paginación
-	Find(ctx context.Context, f TaskFilter) ([]domain.Task, PageInfo, error)
+	Find(ctx context.Context, f domain.TaskFilter) ([]domain.Task, domain.PageInfo, error)
 
 	// Ventana de "hoy" según zona horaria
 	DueToday(ctx context.Context, userID string, loc *time.Location) ([]domain.Task, error)
 
 	// Búsqueda por texto (puede reutilizar Find si no hay índice text)
-	Search(ctx context.Context, f TaskFilter) ([]domain.Task, PageInfo, error)
+	Search(ctx context.Context, f domain.TaskFilter) ([]domain.Task, domain.PageInfo, error)
 
 	// Agregaciones para /stats y /dashboard (3B). Si aún no la usarás,
 	// podés devolver valores en cero y null.

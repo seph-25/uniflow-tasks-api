@@ -3,6 +3,7 @@ package persistence
 import (
 	"context"
 	"fmt"
+	"time"
 	"uniflow-api/internal/domain"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -175,6 +176,23 @@ func (r *MongoTaskRepository) Delete(ctx context.Context, taskID, userID string)
 	}
 
 	return nil
+}
+
+// Métodos para Fase 3 (stubs por ahora)
+func (r *MongoTaskRepository) Find(ctx context.Context, f domain.TaskFilter) ([]domain.Task, domain.PageInfo, error) {
+	return []domain.Task{}, domain.PageInfo{}, nil
+}
+
+func (r *MongoTaskRepository) DueToday(ctx context.Context, userID string, loc *time.Location) ([]domain.Task, error) {
+	return []domain.Task{}, nil
+}
+
+func (r *MongoTaskRepository) Search(ctx context.Context, f domain.TaskFilter) ([]domain.Task, domain.PageInfo, error) {
+	return []domain.Task{}, domain.PageInfo{}, nil
+}
+
+func (r *MongoTaskRepository) Aggregated(ctx context.Context, userID string, until time.Time) (domain.Stats, error) {
+	return domain.Stats{}, nil
 }
 
 // Helper: validar status

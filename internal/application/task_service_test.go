@@ -3,6 +3,8 @@ package application
 import (
 	"context"
 	"testing"
+	"time"
+
 	//"uniflow-api/internal/application/ports"
 	"uniflow-api/internal/domain"
 )
@@ -41,6 +43,23 @@ func (m *mockRepository) Update(ctx context.Context, task *domain.Task) error {
 
 func (m *mockRepository) Delete(ctx context.Context, taskID, userID string) error {
 	return nil
+}
+
+// Métodos para Fase 3 (stubs)
+func (m *mockRepository) Find(ctx context.Context, f domain.TaskFilter) ([]domain.Task, domain.PageInfo, error) {
+	return []domain.Task{}, domain.PageInfo{}, nil
+}
+
+func (m *mockRepository) DueToday(ctx context.Context, userID string, loc *time.Location) ([]domain.Task, error) {
+	return []domain.Task{}, nil
+}
+
+func (m *mockRepository) Search(ctx context.Context, f domain.TaskFilter) ([]domain.Task, domain.PageInfo, error) {
+	return []domain.Task{}, domain.PageInfo{}, nil
+}
+
+func (m *mockRepository) Aggregated(ctx context.Context, userID string, until time.Time) (domain.Stats, error) {
+	return domain.Stats{}, nil
 }
 
 func TestGetAllTasks(t *testing.T) {

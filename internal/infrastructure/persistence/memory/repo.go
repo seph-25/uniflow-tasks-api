@@ -111,3 +111,20 @@ func (r *Repo) Delete(ctx context.Context, taskID, userID string) error {
 	delete(r.data, taskID)
 	return nil
 }
+
+// Métodos para Fase 3 (stubs por ahora)
+func (r *Repo) Find(ctx context.Context, f d.TaskFilter) ([]d.Task, d.PageInfo, error) {
+	return []d.Task{}, d.PageInfo{}, nil
+}
+
+func (r *Repo) DueToday(ctx context.Context, userID string, loc *time.Location) ([]d.Task, error) {
+	return []d.Task{}, nil
+}
+
+func (r *Repo) Search(ctx context.Context, f d.TaskFilter) ([]d.Task, d.PageInfo, error) {
+	return []d.Task{}, d.PageInfo{}, nil
+}
+
+func (r *Repo) Aggregated(ctx context.Context, userID string, until time.Time) (d.Stats, error) {
+	return d.Stats{}, nil
+}
