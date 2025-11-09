@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"uniflow-api/internal/application"
+	"uniflow-api/internal/application/ports"
 	"uniflow-api/internal/domain"
 	"uniflow-api/internal/infrastructure/handlers/requests"
 )
@@ -23,18 +24,36 @@ func NewTaskHandler(ts *application.TaskService) *TaskHandler {
 	}
 }
 
-// GetTasks maneja GET /tasks
+// GetTasks maneja GET /tasks con filtros opcionales
 func (th *TaskHandler) GetTasks(c *gin.Context) {
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	userID := c.GetString("userID") // Ya viene validado del middleware JWT
+	userID := c.GetString("userID")
 	if userID == "" {
 		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
 		return
 	}
 
-	tasks, err := th.taskService.GetAllTasks(ctx, userID)
+	// Parsear query parameters
+	var filterReq requests.TaskFilterRequest
+	if err := c.ShouldBindQuery(&filterReq); err != nil {
+		c.JSON(http.StatusBadRequest, NewErrorResponse("INVALID_FILTER", err.Error()))
+		return
+	}
+
+	// Convertir a domain filter
+	filter, err := filterReq.ToTaskFilter(userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, NewErrorResponse("INVALID_FILTER", err.Error()))
+		return
+	}
+	if filter == nil {
+		filter = &ports.TaskFilter{UserID: userID}
+	}
+
+	// Obtener tareas filtradas
+	tasks, pageInfo, err := th.taskService.GetTasksFiltered(ctx, *filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, NewErrorResponse("INTERNAL_ERROR", err.Error()))
 		return
@@ -45,15 +64,15 @@ func (th *TaskHandler) GetTasks(c *gin.Context) {
 		taskDTOs[i] = TaskFromDomain(&t)
 	}
 
-	response := GetTasksResponse{
-		Data: taskDTOs,
-		Pagination: Pagination{
-			Page:        1,
-			Limit:       10,
-			Total:       len(taskDTOs),
-			TotalPages:  1,
-			HasNext:     false,
-			HasPrevious: false,
+	response := gin.H{
+		"data": taskDTOs,
+		"pagination": gin.H{
+			"page":       pageInfo.Page,
+			"limit":      pageInfo.Limit,
+			"total":      pageInfo.Total,
+			"totalPages": pageInfo.TotalPages,
+			"hasNext":    pageInfo.HasNext,
+			"hasPrev":    pageInfo.HasPrev,
 		},
 	}
 

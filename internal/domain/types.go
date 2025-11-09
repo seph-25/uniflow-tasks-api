@@ -49,25 +49,31 @@ type Stats struct {
 	BySubject   map[string]int `json:"bySubject"`
 }
 
-// TaskFilter filtros genéricos para listados/búsquedas (Fase 3A)
+// TaskFilter estructura para filtrar tareas en consultas
 type TaskFilter struct {
-	UserID    string    // obligatorio para aislar datos por usuario
-	Status    string    // todo | in-progress | done | cancelled (opcional)
-	SubjectID string    // opcional
-	PeriodID  string    // opcional
-	From      *time.Time // ventana inicial (opcional)
-	To        *time.Time // ventana final (opcional)
-	Query     string    // texto libre (3B) opcional
-	Limit     int       // paginación
-	Offset    int       // paginación
+	UserID      string    `form:"userId"` // Obligatorio (viene del JWT)
+	Status      []string  `form:"status"`      // Ej: "todo,in-progress"
+	Priority    []string  `form:"priority"`    // Ej: "high,urgent"
+	SubjectID   string    `form:"subjectId"`
+	PeriodID    string    `form:"periodId"`
+	DueDateFrom time.Time `form:"dueDateFrom"` // ISO 8601
+	DueDateTo   time.Time `form:"dueDateTo"`
+	IsOverdue   *bool     `form:"isOverdue"`
+	IsDueSoon   *bool     `form:"isDueSoon"`   // Próximas 24h
+	Search      string    `form:"search"`      // Búsqueda texto
+	SortBy      string    `form:"sortBy"`      // dueDate, priority, status, createdAt
+	SortOrder   string    `form:"sortOrder"`   // asc, desc
+	Page        int       `form:"page"`
+	Limit       int       `form:"limit"`
+	TimeZone    string    `form:"tz"`          // Ej: America/Costa_Rica
 }
 
-// PageInfo metadatos de paginación (Fase 3A)
+// PageInfo metadatos de paginación
 type PageInfo struct {
 	Total      int64
 	Page       int
 	Limit      int
-	TotalPages int
+	TotalPages int64
 	HasNext    bool
 	HasPrev    bool
 }

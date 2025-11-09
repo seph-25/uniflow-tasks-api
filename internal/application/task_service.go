@@ -2,6 +2,8 @@ package application
 
 import (
 	"context"
+
+
 	"uniflow-api/internal/application/ports"
 	"uniflow-api/internal/domain"
 )
@@ -133,4 +135,20 @@ func (ts *TaskService) DeleteTask(ctx context.Context, taskID, userID string) er
 	}
 
 	return nil
+}
+
+// GetTasksFiltered obtiene tareas con filtros avanzados
+func (ts *TaskService) GetTasksFiltered(ctx context.Context, filter ports.TaskFilter) ([]domain.Task, domain.PageInfo, error) {
+	select {
+	case <-ctx.Done():
+		return nil, domain.PageInfo{}, ctx.Err()
+	default:
+	}
+
+	tasks, pageInfo, err := ts.repo.FindByFilter(ctx, filter)
+	if err != nil {
+		return nil, domain.PageInfo{}, err
+	}
+
+	return tasks, pageInfo, nil
 }

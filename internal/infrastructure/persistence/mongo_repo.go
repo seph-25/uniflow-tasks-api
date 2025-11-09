@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 	"uniflow-api/internal/domain"
+	"uniflow-api/internal/application/ports"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -87,6 +88,130 @@ func (r *MongoTaskRepository) GetAll(ctx context.Context, userID string) ([]doma
 	}
 
 	return tasks, nil
+}
+
+// FindByFilter obtiene tareas con filtros avanzados
+func (r *MongoTaskRepository) FindByFilter(ctx context.Context, filter ports.TaskFilter) ([]domain.Task, domain.PageInfo, error) {
+	// Construir query MongoDB
+	mongoFilter := bson.M{"userId": filter.UserID}
+
+	// Filtro por status
+	if len(filter.Status) > 0 {
+		mongoFilter["status"] = bson.M{"$in": filter.Status}
+	}
+
+	// Filtro por prioridad
+	if len(filter.Priority) > 0 {
+		mongoFilter["priority"] = bson.M{"$in": filter.Priority}
+	}
+
+	// Filtro por materia
+	if filter.SubjectID != "" {
+		mongoFilter["subjectId"] = filter.SubjectID
+	}
+
+	// Filtro por período
+	if filter.PeriodID != "" {
+		mongoFilter["periodId"] = filter.PeriodID
+	}
+
+	// Filtro por rango de fechas
+	if !filter.DueDateFrom.IsZero() || !filter.DueDateTo.IsZero() {
+		dateFilter := bson.M{}
+		if !filter.DueDateFrom.IsZero() {
+			dateFilter["$gte"] = filter.DueDateFrom
+		}
+		if !filter.DueDateTo.IsZero() {
+			dateFilter["$lte"] = filter.DueDateTo
+		}
+		mongoFilter["dueDate"] = dateFilter
+	}
+
+	// Filtro por tareas vencidas
+	if filter.IsOverdue != nil && *filter.IsOverdue {
+		now := time.Now()
+		mongoFilter["dueDate"] = bson.M{"$lt": now}
+		mongoFilter["status"] = bson.M{"$ne": "done"}
+	}
+
+	// Filtro por tareas próximas (24h)
+	if filter.IsDueSoon != nil && *filter.IsDueSoon {
+		loc, _ := time.LoadLocation(filter.TimeZone)
+		now := time.Now().In(loc)
+		in24h := now.Add(24 * time.Hour)
+
+		mongoFilter["dueDate"] = bson.M{
+			"$gte": now,
+			"$lte": in24h,
+		}
+	}
+
+	// Filtro por búsqueda de texto
+	if filter.Search != "" {
+		mongoFilter["$text"] = bson.M{"$search": filter.Search}
+	}
+
+	// Contar total
+	total, err := r.collection.CountDocuments(ctx, mongoFilter)
+	if err != nil {
+		return nil, domain.PageInfo{}, err
+	}
+
+	// Ordenamiento
+	opts := options.Find()
+	sortField := "dueDate"
+	if filter.SortBy == "priority" {
+		sortField = "priority"
+	} else if filter.SortBy == "status" {
+		sortField = "status"
+	} else if filter.SortBy == "createdAt" {
+		sortField = "createdAt"
+	}
+
+	sortOrder := 1 // asc
+	if filter.SortOrder == "desc" {
+		sortOrder = -1
+	}
+	opts.SetSort(bson.M{sortField: sortOrder})
+
+	// Paginación
+	skip := int64((filter.Page - 1) * filter.Limit)
+	opts.SetSkip(skip)
+	opts.SetLimit(int64(filter.Limit))
+
+	// Si hay búsqueda de texto, agregar score
+	if filter.Search != "" {
+		opts.SetProjection(bson.M{"score": bson.M{"$meta": "textScore"}})
+		opts.SetSort(bson.M{"score": bson.M{"$meta": "textScore"}})
+	}
+
+	cursor, err := r.collection.Find(ctx, mongoFilter, opts)
+	if err != nil {
+		return nil, domain.PageInfo{}, err
+	}
+	defer cursor.Close(ctx)
+
+	var tasks []domain.Task
+	if err = cursor.All(ctx, &tasks); err != nil {
+		return nil, domain.PageInfo{}, err
+	}
+
+	if tasks == nil {
+		tasks = []domain.Task{}
+	}
+
+	// Calcular paginación
+	totalPages := (total + int64(filter.Limit) - 1) / int64(filter.Limit)
+	pageInfo := domain.PageInfo{
+		Total:      total,
+		Page:       filter.Page,
+		Limit:      filter.Limit,
+		TotalPages: totalPages,
+		HasNext:    int64(filter.Page) < totalPages,
+		HasPrev:    filter.Page > 1,
+	}
+
+	return tasks, pageInfo, nil
 }
 
 // GetByUserAndStatus obtiene tareas filtradas por usuario y estado
