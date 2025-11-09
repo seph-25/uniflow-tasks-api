@@ -3,10 +3,17 @@ package application
 import (
 	"context"
 
-
 	"uniflow-api/internal/application/ports"
 	"uniflow-api/internal/domain"
 )
+
+//helper to ensure context is not nil
+func ensureContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
+}
 
 // TaskService coordina casos de uso relacionados con tareas
 // Ahora depende de una abstracción (TaskRepository) en lugar de datos hardcodeados
@@ -24,6 +31,7 @@ func NewTaskService(repo ports.TaskRepository) *TaskService {
 
 // GetAllTasks obtiene todas las tareas del usuario desde la BD real
 func (ts *TaskService) GetAllTasks(ctx context.Context, userID string) ([]domain.Task, error) {
+	ctx = ensureContext(ctx)
 	// Validar que el contexto no fue cancelado
 	select {
 	case <-ctx.Done():
@@ -42,6 +50,7 @@ func (ts *TaskService) GetAllTasks(ctx context.Context, userID string) ([]domain
 
 // GetTaskByID obtiene una tarea específica por ID
 func (ts *TaskService) GetTaskByID(ctx context.Context, taskID, userID string) (*domain.Task, error) {
+	ctx = ensureContext(ctx)
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -58,6 +67,7 @@ func (ts *TaskService) GetTaskByID(ctx context.Context, taskID, userID string) (
 
 // GetTasksByStatus obtiene tareas filtrando por estado
 func (ts *TaskService) GetTasksByStatus(ctx context.Context, userID, status string) ([]domain.Task, error) {
+	ctx = ensureContext(ctx)
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -74,6 +84,7 @@ func (ts *TaskService) GetTasksByStatus(ctx context.Context, userID, status stri
 
 // CreateTask crea una nueva tarea
 func (ts *TaskService) CreateTask(ctx context.Context, task *domain.Task) error {
+	ctx = ensureContext(ctx)
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -96,6 +107,7 @@ func (ts *TaskService) CreateTask(ctx context.Context, task *domain.Task) error 
 
 // UpdateTask actualiza una tarea existente
 func (ts *TaskService) UpdateTask(ctx context.Context, task *domain.Task) error {
+	ctx = ensureContext(ctx)
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -123,6 +135,7 @@ func (ts *TaskService) UpdateTask(ctx context.Context, task *domain.Task) error 
 
 // DeleteTask elimina una tarea
 func (ts *TaskService) DeleteTask(ctx context.Context, taskID, userID string) error {
+	ctx = ensureContext(ctx)
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -139,6 +152,7 @@ func (ts *TaskService) DeleteTask(ctx context.Context, taskID, userID string) er
 
 // GetTasksFiltered obtiene tareas con filtros avanzados
 func (ts *TaskService) GetTasksFiltered(ctx context.Context, filter ports.TaskFilter) ([]domain.Task, domain.PageInfo, error) {
+	ctx = ensureContext(ctx)
 	select {
 	case <-ctx.Done():
 		return nil, domain.PageInfo{}, ctx.Err()

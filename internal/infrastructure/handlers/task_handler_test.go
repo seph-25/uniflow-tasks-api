@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -16,22 +15,21 @@ import (
 
 // Setup helper para tests
 func setupTestRouter() (*gin.Engine, *TaskHandler, *application.TaskService) {
-    gin.SetMode(gin.TestMode)
-    r := gin.New()
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
 
-    // Middleware para simular auth
-    r.Use(func(c *gin.Context) {
-        c.Set("userID", "user-test")
-        c.Next()
-    })
+	// Middleware para simular auth
+	r.Use(func(c *gin.Context) {
+		c.Set("userID", "user-test")
+		c.Next()
+	})
 
-    repo := memory.NewRepo()
-    service := application.NewTaskService(repo)
-    handler := NewTaskHandler(service)
+	repo := memory.NewRepo()
+	service := application.NewTaskService(repo)
+	handler := NewTaskHandler(service)
 
-    return r, handler, service
+	return r, handler, service
 }
-
 
 func TestGetTasksWithFilters(t *testing.T) {
 	r, handler, service := setupTestRouter()

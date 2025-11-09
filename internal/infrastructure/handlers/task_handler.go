@@ -3,8 +3,8 @@ package handlers
 import (
 	"context"
 	"net/http"
-	"time"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"uniflow-api/internal/application"
@@ -316,11 +316,11 @@ func (th *TaskHandler) SearchTasks(c *gin.Context) {
 
 	// Crear filter con búsqueda
 	filter := ports.TaskFilter{
-		UserID:   userID,
-		Search:   query,
-		Limit:    limit,
-		Page:     1,
-		SortBy:   "createdAt",
+		UserID:    userID,
+		Search:    query,
+		Limit:     limit,
+		Page:      1,
+		SortBy:    "createdAt",
 		SortOrder: "desc",
 	}
 
@@ -336,10 +336,10 @@ func (th *TaskHandler) SearchTasks(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"query":       query,
-		"results":     taskDTOs,
-		"count":       len(taskDTOs),
-		"totalFound":  pageInfo.Total,
+		"query":      query,
+		"results":    taskDTOs,
+		"count":      len(taskDTOs),
+		"totalFound": pageInfo.Total,
 	})
 }
 
@@ -376,15 +376,15 @@ func (th *TaskHandler) GetOverdue(c *gin.Context) {
 	for i, t := range tasks {
 		dto := TaskFromDomain(&t)
 		// Calcular daysOverdue
-		
+
 		taskDTOs[i] = dto
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		
-		"tasks":        taskDTOs,
-		"count":        len(taskDTOs),
-		"timezone":     tz,
+
+		"tasks":    taskDTOs,
+		"count":    len(taskDTOs),
+		"timezone": tz,
 	})
 }
 
@@ -427,9 +427,9 @@ func (th *TaskHandler) GetCompleted(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"tasks":        taskDTOs,
-		"count":        len(taskDTOs),
-		"pagination":   pageInfo,
+		"tasks":      taskDTOs,
+		"count":      len(taskDTOs),
+		"pagination": pageInfo,
 	})
 }
 
@@ -477,11 +477,11 @@ func (th *TaskHandler) GetByPeriod(c *gin.Context) {
 	periodID := c.Param("periodId")
 
 	filter := ports.TaskFilter{
-		UserID:   userID,
-		PeriodID: periodID,
-		Limit:    100,
-		Page:     1,
-		SortBy:   "dueDate",
+		UserID:    userID,
+		PeriodID:  periodID,
+		Limit:     100,
+		Page:      1,
+		SortBy:    "dueDate",
 		SortOrder: "asc",
 	}
 

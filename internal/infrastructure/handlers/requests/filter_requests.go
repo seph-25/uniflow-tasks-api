@@ -7,20 +7,20 @@ import "uniflow-api/internal/application/ports"
 
 // TaskFilterRequest estructura para parsear query parameters
 type TaskFilterRequest struct {
-	Status      string `form:"status"`       // Comma-separated: "todo,in-progress"
-	Priority    string `form:"priority"`     // Comma-separated: "high,urgent"
+	Status      string `form:"status"`   // Comma-separated: "todo,in-progress"
+	Priority    string `form:"priority"` // Comma-separated: "high,urgent"
 	SubjectID   string `form:"subjectId"`
 	PeriodID    string `form:"periodId"`
-	DueDateFrom string `form:"dueDateFrom"`  // ISO 8601: "2025-10-01"
-	DueDateTo   string `form:"dueDateTo"`    // ISO 8601: "2025-10-31"
-	IsOverdue   *bool  `form:"isOverdue"`    // true/false
-	IsDueSoon   *bool  `form:"isDueSoon"`    // true/false (próximas 24h)
-	Search      string `form:"search"`       // Búsqueda libre
-	SortBy      string `form:"sortBy"`       // dueDate, priority, status, createdAt
-	SortOrder   string `form:"sortOrder"`    // asc, desc
+	DueDateFrom string `form:"dueDateFrom"` // ISO 8601: "2025-10-01"
+	DueDateTo   string `form:"dueDateTo"`   // ISO 8601: "2025-10-31"
+	IsOverdue   *bool  `form:"isOverdue"`   // true/false
+	IsDueSoon   *bool  `form:"isDueSoon"`   // true/false (próximas 24h)
+	Search      string `form:"search"`      // Búsqueda libre
+	SortBy      string `form:"sortBy"`      // dueDate, priority, status, createdAt
+	SortOrder   string `form:"sortOrder"`   // asc, desc
 	Page        int    `form:"page"`
 	Limit       int    `form:"limit"`
-	TimeZone    string `form:"tz"`           // Ej: "America/Costa_Rica"
+	TimeZone    string `form:"tz"` // Ej: "America/Costa_Rica"
 }
 
 // ToTaskFilter convierte request a domain.TaskFilter

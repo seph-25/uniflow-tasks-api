@@ -17,7 +17,7 @@ import (
 	"uniflow-api/internal/application"
 	ports "uniflow-api/internal/application/ports"
 	"uniflow-api/internal/infrastructure/handlers"
-	"uniflow-api/internal/infrastructure/persistence"          // Mongo repo
+	"uniflow-api/internal/infrastructure/persistence"            // Mongo repo
 	mem "uniflow-api/internal/infrastructure/persistence/memory" // Repo en memoria
 )
 
@@ -112,7 +112,6 @@ func main() {
 			c.JSON(200, gin.H{"token": token})
 		})
 	}
-
 
 	// 7) Levantar server
 	fmt.Printf("Servidor escuchando en puerto %s\n", port)
