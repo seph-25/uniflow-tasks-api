@@ -12,7 +12,6 @@ import (
 // (puede ser MongoDB, PostgreSQL, etc.)
 type TaskRepository interface {
 
-	
 	// Create inserta una nueva tarea en la BD
 	Create(ctx context.Context, task *domain.Task) error
 
@@ -45,4 +44,23 @@ type TaskRepository interface {
 	// podés devolver valores en cero y null.
 	Aggregated(ctx context.Context, userID string, until time.Time) (domain.Stats, error)
 
+	FindByFilter(ctx context.Context, filter TaskFilter) ([]domain.Task, domain.PageInfo, error)
+}
+
+type TaskFilter struct {
+	UserID      string
+	Status      []string
+	Priority    []string
+	SubjectID   string
+	PeriodID    string
+	DueDateFrom time.Time
+	DueDateTo   time.Time
+	IsOverdue   *bool
+	IsDueSoon   *bool
+	Search      string
+	SortBy      string
+	SortOrder   string
+	Page        int
+	Limit       int
+	TimeZone    string
 }

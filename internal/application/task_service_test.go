@@ -6,12 +6,17 @@ import (
 	"time"
 
 	//"uniflow-api/internal/application/ports"
+	"uniflow-api/internal/application/ports"
 	"uniflow-api/internal/domain"
 )
 
 // Mock repository para tests
 type mockRepository struct {
 	tasks map[string][]domain.Task
+
+	findByFilterOut  []domain.Task
+	findByFilterPage domain.PageInfo
+	err              error
 }
 
 func (m *mockRepository) Create(ctx context.Context, task *domain.Task) error {
@@ -112,4 +117,8 @@ func TestCreateTask(t *testing.T) {
 	if len(tasks) != 1 {
 		t.Errorf("Expected 1 task in repository, got %d", len(tasks))
 	}
+}
+
+func (m *mockRepository) FindByFilter(ctx context.Context, filter ports.TaskFilter) ([]domain.Task, domain.PageInfo, error) {
+	return m.findByFilterOut, m.findByFilterPage, m.err
 }
