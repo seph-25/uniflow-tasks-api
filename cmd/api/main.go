@@ -89,6 +89,13 @@ func main() {
 	protected := r.Group("/")
 	protected.Use(auth.AuthMiddleware())
 	{
+		// Rutas específicas
+		protected.GET("/tasks/search", taskHandler.SearchTasks)
+		protected.GET("/tasks/overdue", taskHandler.GetOverdue)
+		protected.GET("/tasks/completed", taskHandler.GetCompleted)
+		protected.GET("/tasks/by-subject/:subjectId", taskHandler.GetBySubject)
+		protected.GET("/tasks/by-period/:periodId", taskHandler.GetByPeriod)
+
 		protected.GET("/tasks", taskHandler.GetTasks)
 		protected.GET("/tasks/:id", taskHandler.GetTaskByID)
 		protected.POST("/tasks", taskHandler.CreateTask)

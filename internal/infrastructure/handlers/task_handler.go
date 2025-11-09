@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"time"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"uniflow-api/internal/application"
@@ -287,4 +288,217 @@ func (th *TaskHandler) CompleteTask(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, TaskFromDomain(task))
+}
+
+// SearchTasks maneja GET /tasks/search
+func (th *TaskHandler) SearchTasks(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	userID := c.GetString("userID")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+		return
+	}
+
+	query := c.Query("q")
+	if query == "" {
+		c.JSON(http.StatusBadRequest, NewErrorResponse("MISSING_QUERY", "search query parameter 'q' is required"))
+		return
+	}
+
+	limit := 20
+	if l := c.Query("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 100 {
+			limit = parsed
+		}
+	}
+
+	// Crear filter con búsqueda
+	filter := ports.TaskFilter{
+		UserID:   userID,
+		Search:   query,
+		Limit:    limit,
+		Page:     1,
+		SortBy:   "createdAt",
+		SortOrder: "desc",
+	}
+
+	tasks, pageInfo, err := th.taskService.GetTasksFiltered(ctx, filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse("SEARCH_ERROR", err.Error()))
+		return
+	}
+
+	taskDTOs := make([]TaskDTO, len(tasks))
+	for i, t := range tasks {
+		taskDTOs[i] = TaskFromDomain(&t)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"query":       query,
+		"results":     taskDTOs,
+		"count":       len(taskDTOs),
+		"totalFound":  pageInfo.Total,
+	})
+}
+
+// GetOverdue maneja GET /tasks/overdue
+func (th *TaskHandler) GetOverdue(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	userID := c.GetString("userID")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+		return
+	}
+
+	tz := c.DefaultQuery("tz", "UTC")
+
+	filter := ports.TaskFilter{
+		UserID:    userID,
+		IsOverdue: &[]bool{true}[0],
+		TimeZone:  tz,
+		Limit:     100,
+		Page:      1,
+		SortBy:    "dueDate",
+		SortOrder: "asc",
+	}
+
+	tasks, _, err := th.taskService.GetTasksFiltered(ctx, filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse("INTERNAL_ERROR", err.Error()))
+		return
+	}
+
+	taskDTOs := make([]TaskDTO, len(tasks))
+	for i, t := range tasks {
+		dto := TaskFromDomain(&t)
+		// Calcular daysOverdue
+		
+		taskDTOs[i] = dto
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		
+		"tasks":        taskDTOs,
+		"count":        len(taskDTOs),
+		"timezone":     tz,
+	})
+}
+
+// GetCompleted maneja GET /tasks/completed
+func (th *TaskHandler) GetCompleted(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	userID := c.GetString("userID")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+		return
+	}
+
+	limit := 20
+	if l := c.Query("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
+			limit = parsed
+		}
+	}
+
+	filter := ports.TaskFilter{
+		UserID:    userID,
+		Status:    []string{"done"},
+		Limit:     limit,
+		Page:      1,
+		SortBy:    "updatedAt",
+		SortOrder: "desc",
+	}
+
+	tasks, pageInfo, err := th.taskService.GetTasksFiltered(ctx, filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse("INTERNAL_ERROR", err.Error()))
+		return
+	}
+
+	taskDTOs := make([]TaskDTO, len(tasks))
+	for i, t := range tasks {
+		taskDTOs[i] = TaskFromDomain(&t)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"tasks":        taskDTOs,
+		"count":        len(taskDTOs),
+		"pagination":   pageInfo,
+	})
+}
+
+// GetBySubject maneja GET /tasks/by-subject/:subjectId
+func (th *TaskHandler) GetBySubject(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	userID := c.GetString("userID")
+	subjectID := c.Param("subjectId")
+
+	filter := ports.TaskFilter{
+		UserID:    userID,
+		SubjectID: subjectID,
+		Limit:     100,
+		Page:      1,
+		SortBy:    "dueDate",
+		SortOrder: "asc",
+	}
+
+	tasks, _, err := th.taskService.GetTasksFiltered(ctx, filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse("INTERNAL_ERROR", err.Error()))
+		return
+	}
+
+	taskDTOs := make([]TaskDTO, len(tasks))
+	for i, t := range tasks {
+		taskDTOs[i] = TaskFromDomain(&t)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"subjectId": subjectID,
+		"tasks":     taskDTOs,
+		"count":     len(taskDTOs),
+	})
+}
+
+// GetByPeriod maneja GET /tasks/by-period/:periodId
+func (th *TaskHandler) GetByPeriod(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	userID := c.GetString("userID")
+	periodID := c.Param("periodId")
+
+	filter := ports.TaskFilter{
+		UserID:   userID,
+		PeriodID: periodID,
+		Limit:    100,
+		Page:     1,
+		SortBy:   "dueDate",
+		SortOrder: "asc",
+	}
+
+	tasks, _, err := th.taskService.GetTasksFiltered(ctx, filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse("INTERNAL_ERROR", err.Error()))
+		return
+	}
+
+	taskDTOs := make([]TaskDTO, len(tasks))
+	for i, t := range tasks {
+		taskDTOs[i] = TaskFromDomain(&t)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"periodId": periodID,
+		"tasks":    taskDTOs,
+		"count":    len(taskDTOs),
+	})
 }
