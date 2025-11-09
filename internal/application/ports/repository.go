@@ -3,22 +3,21 @@ package ports
 import (
 	"context"
 	"time"
-	
+
 	"uniflow-api/internal/domain"
 )
 
-
 // Filtros genéricos para listados/búsquedas
 type TaskFilter struct {
-	UserID    string    // obligatorio para aislar datos por usuario
-	Status    string    // todo | in-progress | done | cancelled (opcional)
-	SubjectID string    // opcional
-	PeriodID  string    // opcional
+	UserID    string     // obligatorio para aislar datos por usuario
+	Status    string     // todo | in-progress | done | cancelled (opcional)
+	SubjectID string     // opcional
+	PeriodID  string     // opcional
 	From      *time.Time // ventana inicial (opcional)
 	To        *time.Time // ventana final (opcional)
-	Query     string    // texto libre (3B) opcional
-	Limit     int       // paginación
-	Offset    int       // paginación
+	Query     string     // texto libre (3B) opcional
+	Limit     int        // paginación
+	Offset    int        // paginación
 }
 
 // Metadatos de paginación
@@ -36,7 +35,6 @@ type PageInfo struct {
 // (puede ser MongoDB, PostgreSQL, etc.)
 type TaskRepository interface {
 
-	
 	// Create inserta una nueva tarea en la BD
 	Create(ctx context.Context, task *domain.Task) error
 
@@ -67,6 +65,6 @@ type TaskRepository interface {
 
 	// Agregaciones para /stats y /dashboard (3B). Si aún no la usarás,
 	// podés devolver valores en cero y null.
-	Aggregated(ctx context.Context, userID string, until time.Time) (domain.Stats, error)
+	//Aggregated(ctx context.Context, userID string, until time.Time) (domain.Stats, error)
 
 }

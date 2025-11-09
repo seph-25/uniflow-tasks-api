@@ -15,8 +15,7 @@ import (
 	"uniflow-api/internal/application"
 	ports "uniflow-api/internal/application/ports"
 	"uniflow-api/internal/infrastructure/handlers"
-	"uniflow-api/internal/infrastructure/persistence"          // Mongo repo
-	mem "uniflow-api/internal/infrastructure/persistence/memory" // Repo en memoria
+	"uniflow-api/internal/infrastructure/persistence" // Mongo repo
 )
 
 func main() {
@@ -40,37 +39,32 @@ func main() {
 	mongoURI := os.Getenv("MONGO_URI")
 	var repo ports.TaskRepository
 
-	if mongoURI == "" {
-		log.Println("MONGO_URI no configurada → usando repositorio EN MEMORIA")
-		repo = mem.NewRepo()
-	} else {
-		log.Println("Inicializando repositorio Mongo…")
+	log.Println("Inicializando repositorio Mongo…")
 
-		mongoDB := os.Getenv("MONGO_DB")
-		if mongoDB == "" {
-			mongoDB = "uniflowdb" // default sensato
-		}
-
-		// Conectar a Mongo con timeout
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
-		if err != nil {
-			log.Fatalf("ERROR al conectar a MongoDB: %v", err)
-		}
-		defer client.Disconnect(context.Background())
-
-		// Ping
-		if err := client.Ping(ctx, nil); err != nil {
-			log.Fatalf("ERROR al hacer ping a MongoDB: %v", err)
-		}
-		log.Println("✅ Conectado a MongoDB")
-
-		// Selección de colección y repo
-		coll := client.Database(mongoDB).Collection("tasks")
-		repo = persistence.NewMongoTaskRepository(coll)
+	mongoDB := os.Getenv("MONGO_DB")
+	if mongoDB == "" {
+		mongoDB = "uniflowdb" // default sensato
 	}
+
+	// Conectar a Mongo con timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
+	if err != nil {
+		log.Fatalf("ERROR al conectar a MongoDB: %v", err)
+	}
+	defer client.Disconnect(context.Background())
+
+	// Ping
+	if err := client.Ping(ctx, nil); err != nil {
+		log.Fatalf("ERROR al hacer ping a MongoDB: %v", err)
+	}
+	log.Println("✅ Conectado a MongoDB")
+
+	// Selección de colección y repo
+	coll := client.Database(mongoDB).Collection("tasks")
+	repo = persistence.NewMongoTaskRepository(coll)
 
 	// 5) Servicio + Router + Handlers
 	taskService := application.NewTaskService(repo)
