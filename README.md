@@ -4,10 +4,10 @@ Sistema de gestión de tareas académicas para estudiantes universitarios.
 
 ## 📋 Descripción
 
-**UniFlow** es una plataforma que ayuda a estudiantes a organizar y rastrear sus tareas, 
+**UniFlow** es una plataforma que ayuda a estudiantes a organizar y rastrear sus tareas,
 asignaciones y actividades académicas a través de múltiples materias y períodos escolares.
 
-El **Tasks Backend** es el microservicio central que maneja todas las operaciones 
+El **Tasks Backend** es el microservicio central que maneja todas las operaciones
 relacionadas con tareas académicas.
 
 ## 🏗️ Arquitectura
@@ -43,6 +43,7 @@ El proyecto sigue **Clean Architecture** con tres capas:
 ## 🏃 Ejecución Local
 
 ### Opción 1: Directo
+
 ```bash
 # Clonar repositorio
 git clone <repo-url>
@@ -58,6 +59,7 @@ go run ./cmd/api/main.go
 Server escucha en `http://localhost:8080`
 
 ### Opción 2: Docker
+
 ```bash
 # Build
 docker build -t uniflow-api:dev .
@@ -69,11 +71,13 @@ docker run -p 8080:8080 -e PORT=8080 uniflow-api:dev
 ## 🧪 Endpoints Fase 1A
 
 ### GET /health
+
 ```bash
 curl http://localhost:8080/health
 ```
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -84,11 +88,13 @@ curl http://localhost:8080/health
 ```
 
 ### GET /tasks
+
 ```bash
 curl http://localhost:8080/tasks
 ```
 
 **Response:**
+
 ```json
 {
   "data": [
@@ -131,11 +137,31 @@ Ver `.env.example` para configuración completa.
 - **Fase 3A**: Consultas avanzadas
 - **Fase 3B**: Analytics y Dashboard
 
-## 🔒 Seguridad
+## 🔒 Seguridad y Autenticación
 
-- Los endpoints requieren autenticación vía JWT (Fase 2B+)
-- Las operaciones se filtran por `userID` extraído del token
-- Las imágenes Docker usan `distroless` para mínima superficie de ataque
+### Autenticación mediante Headers HTTP (API Management)
+
+Este servicio no genera ni valida tokens JWT localmente. La autenticación se delega a **Azure API Management** que realiza la validación de Google OAuth y luego inyecta headers HTTP confiables:
+
+- `X-User-ID` (obligatorio) - Identificador único del usuario
+- `X-User-Email` (opcional) - Email del usuario autenticado
+- `X-User-Name` (opcional) - Nombre del usuario
+- `X-User-Picture` (opcional) - URL de la foto de perfil
+
+Todos los endpoints (excepto `/health`) requieren el header `X-User-ID`.
+
+### Testing Local (Desarrollo)
+
+En modo `GIN_MODE=debug`, puedes usar headers de desarrollo para simular autenticación:
+
+```bash
+curl -H "X-Dev-User-ID: dev-user-123" \
+     -H "X-Dev-User-Email: dev@uniflow.edu" \
+     -H "X-Dev-User-Name: Dev User" \
+     http://localhost:8080/tasks
+```
+
+**⚠️ IMPORTANTE:** Los headers `X-Dev-*` solo funcionan en modo debug y NUNCA deben usarse en producción.
 
 ## 📖 Documentación
 
