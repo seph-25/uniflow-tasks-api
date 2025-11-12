@@ -6,11 +6,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"uniflow-api/internal/application"
 	"uniflow-api/internal/application/ports"
 	"uniflow-api/internal/domain"
 	"uniflow-api/internal/infrastructure/handlers/requests"
+
+	"github.com/gin-gonic/gin"
 )
 
 // TaskHandler maneja operaciones de tareas
@@ -25,14 +26,30 @@ func NewTaskHandler(ts *application.TaskService) *TaskHandler {
 	}
 }
 
+// getUserID extrae el userID del contexto Gin (inyectado por AuthMiddleware)
+// Retorna el userID y un bool indicando si se encontró correctamente
+func getUserID(c *gin.Context) (string, bool) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		return "", false
+	}
+	
+	userIDStr, ok := userID.(string)
+	if !ok || userIDStr == "" {
+		return "", false
+	}
+	
+	return userIDStr, true
+}
+
 // GetTasks maneja GET /tasks con filtros opcionales
 func (th *TaskHandler) GetTasks(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	userID := c.GetString("userID")
-	if userID == "" {
-		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in context (middleware failed)"))
 		return
 	}
 
@@ -91,9 +108,9 @@ func (th *TaskHandler) CreateTask(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetString("userID") // Ya viene validado del middleware JWT
-	if userID == "" {
-		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in context (middleware failed)"))
 		return
 	}
 
@@ -129,9 +146,9 @@ func (th *TaskHandler) GetTaskByID(c *gin.Context) {
 	defer cancel()
 
 	taskID := c.Param("id")
-	userID := c.GetString("userID") // Ya viene validado del middleware JWT
-	if userID == "" {
-		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in context (middleware failed)"))
 		return
 	}
 
@@ -150,9 +167,9 @@ func (th *TaskHandler) UpdateTask(c *gin.Context) {
 	defer cancel()
 
 	taskID := c.Param("id")
-	userID := c.GetString("userID") // Ya viene validado del middleware JWT
-	if userID == "" {
-		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in context (middleware failed)"))
 		return
 	}
 
@@ -197,9 +214,9 @@ func (th *TaskHandler) UpdateTaskStatus(c *gin.Context) {
 	defer cancel()
 
 	taskID := c.Param("id")
-	userID := c.GetString("userID") // Ya viene validado del middleware JWT
-	if userID == "" {
-		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in context (middleware failed)"))
 		return
 	}
 
@@ -237,9 +254,9 @@ func (th *TaskHandler) DeleteTask(c *gin.Context) {
 	defer cancel()
 
 	taskID := c.Param("id")
-	userID := c.GetString("userID") // Ya viene validado del middleware JWT
-	if userID == "" {
-		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in context (middleware failed)"))
 		return
 	}
 
@@ -257,9 +274,9 @@ func (th *TaskHandler) CompleteTask(c *gin.Context) {
 	defer cancel()
 
 	taskID := c.Param("id")
-	userID := c.GetString("userID") // Ya viene validado del middleware JWT
-	if userID == "" {
-		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in context (middleware failed)"))
 		return
 	}
 
@@ -295,9 +312,9 @@ func (th *TaskHandler) SearchTasks(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	userID := c.GetString("userID")
-	if userID == "" {
-		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in context (middleware failed)"))
 		return
 	}
 
@@ -348,9 +365,9 @@ func (th *TaskHandler) GetOverdue(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	userID := c.GetString("userID")
-	if userID == "" {
-		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in context (middleware failed)"))
 		return
 	}
 
@@ -393,9 +410,9 @@ func (th *TaskHandler) GetCompleted(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	userID := c.GetString("userID")
-	if userID == "" {
-		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in token"))
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in context (middleware failed)"))
 		return
 	}
 
@@ -438,7 +455,11 @@ func (th *TaskHandler) GetBySubject(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	userID := c.GetString("userID")
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in context (middleware failed)"))
+		return
+	}
 	subjectID := c.Param("subjectId")
 
 	filter := ports.TaskFilter{
@@ -473,7 +494,11 @@ func (th *TaskHandler) GetByPeriod(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
 	defer cancel()
 
-	userID := c.GetString("userID")
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in context (middleware failed)"))
+		return
+	}
 	periodID := c.Param("periodId")
 
 	filter := ports.TaskFilter{

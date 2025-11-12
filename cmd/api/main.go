@@ -12,11 +12,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"uniflow-api/internal/infrastructure/auth"
-
 	"uniflow-api/internal/application"
 	ports "uniflow-api/internal/application/ports"
 	"uniflow-api/internal/infrastructure/handlers"
+	"uniflow-api/internal/infrastructure/middleware"
 	"uniflow-api/internal/infrastructure/persistence"            // Mongo repo
 	mem "uniflow-api/internal/infrastructure/persistence/memory" // Repo en memoria
 )
@@ -80,40 +79,34 @@ func main() {
 
 	taskHandler := handlers.NewTaskHandler(taskService)
 
-	// 6) Rutas
+	// 6) Rutas públicas (sin autenticación)
+	r.GET("/health", handlers.HealthHandler)
 
-	// 6) Rutas
-	r.GET("/health", handlers.HealthHandler) // Sin JWT (health check público)
-
-	// Grupo de rutas protegidas con JWT
-	protected := r.Group("/")
-	protected.Use(auth.AuthMiddleware())
-	{
-		// Rutas específicas
-		protected.GET("/tasks/search", taskHandler.SearchTasks)
-		protected.GET("/tasks/overdue", taskHandler.GetOverdue)
-		protected.GET("/tasks/completed", taskHandler.GetCompleted)
-		protected.GET("/tasks/by-subject/:subjectId", taskHandler.GetBySubject)
-		protected.GET("/tasks/by-period/:periodId", taskHandler.GetByPeriod)
-
-		protected.GET("/tasks", taskHandler.GetTasks)
-		protected.GET("/tasks/:id", taskHandler.GetTaskByID)
-		protected.POST("/tasks", taskHandler.CreateTask)
-		protected.PUT("/tasks/:id", taskHandler.UpdateTask)
-		protected.PATCH("/tasks/:id/status", taskHandler.UpdateTaskStatus)
-		protected.PATCH("/tasks/:id/complete", taskHandler.CompleteTask)
-		protected.DELETE("/tasks/:id", taskHandler.DeleteTask)
-	}
-
-	// Endpoint de testing para generar tokens (SOLO DEV)
+	// 7) Middleware de autenticación (headers de API Management)
+	// En desarrollo, DevAuthBypass permite usar X-Dev-User-ID
 	if os.Getenv("GIN_MODE") == "debug" {
-		r.POST("/auth/test-token", func(c *gin.Context) {
-			token, _ := auth.GenerateToken("user-test-001", "student@uniflow.edu")
-			c.JSON(200, gin.H{"token": token})
-		})
+		r.Use(middleware.DevAuthBypass())
 	}
+	r.Use(middleware.AuthMiddleware())
 
-	// 7) Levantar server
+	// 8) Rutas protegidas (requieren headers X-User-*)
+	// Rutas específicas (deben ir primero para no colisionar con :id)
+	r.GET("/tasks/search", taskHandler.SearchTasks)
+	r.GET("/tasks/overdue", taskHandler.GetOverdue)
+	r.GET("/tasks/completed", taskHandler.GetCompleted)
+	r.GET("/tasks/by-subject/:subjectId", taskHandler.GetBySubject)
+	r.GET("/tasks/by-period/:periodId", taskHandler.GetByPeriod)
+
+	// Rutas CRUD
+	r.GET("/tasks", taskHandler.GetTasks)
+	r.GET("/tasks/:id", taskHandler.GetTaskByID)
+	r.POST("/tasks", taskHandler.CreateTask)
+	r.PUT("/tasks/:id", taskHandler.UpdateTask)
+	r.PATCH("/tasks/:id/status", taskHandler.UpdateTaskStatus)
+	r.PATCH("/tasks/:id/complete", taskHandler.CompleteTask)
+	r.DELETE("/tasks/:id", taskHandler.DeleteTask)
+
+	// 9) Levantar server
 	fmt.Printf("Servidor escuchando en puerto %s\n", port)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("ERROR al levantar servidor: %v", err)
