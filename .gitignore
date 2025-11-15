@@ -40,6 +40,11 @@ build/
 # Logs
 *.log
 
+# Coverage
+coverage
+coverage.out
+*.out
+
 # Temporal
 tmp/
 
