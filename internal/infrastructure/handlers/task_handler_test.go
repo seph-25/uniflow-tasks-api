@@ -1,16 +1,18 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"uniflow-api/internal/application"
 	"uniflow-api/internal/domain"
 	"uniflow-api/internal/infrastructure/persistence/memory"
+
+	"github.com/gin-gonic/gin"
 )
 
 // Setup helper para tests
@@ -47,7 +49,7 @@ func TestGetTasksWithFilters(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	service.CreateTask(nil, task1)
+	_ = service.CreateTask(context.Background(), task1)
 
 	// Registrar ruta
 	r.GET("/tasks", handler.GetTasks)
@@ -62,7 +64,7 @@ func TestGetTasksWithFilters(t *testing.T) {
 	}
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	_ = json.Unmarshal(w.Body.Bytes(), &response)
 
 	// Validar estructura
 	if _, ok := response["data"]; !ok {

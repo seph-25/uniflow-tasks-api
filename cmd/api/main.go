@@ -60,7 +60,9 @@ func main() {
 		if err != nil {
 			log.Fatalf("ERROR al conectar a MongoDB: %v", err)
 		}
-		defer client.Disconnect(context.Background())
+		defer func() {
+			_ = client.Disconnect(context.Background())
+		}()
 
 		// Ping
 		if err := client.Ping(ctx, nil); err != nil {
