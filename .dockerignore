@@ -1,12 +1,67 @@
+# Git
 .git
 .gitignore
-.env
-.env.local
-.vscode
-.idea
+.github/
+
+# Documentación
+*.md
 README.md
 LICENSE
+ARCHITECTURE.md
+CLAUDE.md
+GITHUB_SECRETS.md
+GITHUB_SECRETS_OIDC.md
+SETUP_OIDC.md
+
+# Environment files
+.env
+.env.*
+.env.local
+.env.example
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Scripts auxiliares
+get-azure-credentials.ps1
+check-azure-resources.ps1
+test_endpoints.ps1
+mongoSetup.js
+
+# Docker
 docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Logs y temporales
 *.log
+*.out
+coverage.out
+coverage
+tmp/
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Go
 vendor/
+*.exe
+*.dll
+*.so
+*.dylib
+/uniflow-api
+api.exe
+
+# Build artifacts
+dist/
+build/
+container-config.json
+
+# Tests
+*_test.go
+testdata/
