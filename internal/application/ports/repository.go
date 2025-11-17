@@ -47,20 +47,5 @@ type TaskRepository interface {
 	FindByFilter(ctx context.Context, filter TaskFilter) ([]domain.Task, domain.PageInfo, error)
 }
 
-type TaskFilter struct {
-	UserID      string
-	Status      []string
-	Priority    []string
-	SubjectID   string
-	PeriodID    string
-	DueDateFrom time.Time
-	DueDateTo   time.Time
-	IsOverdue   *bool
-	IsDueSoon   *bool
-	Search      string
-	SortBy      string
-	SortOrder   string
-	Page        int
-	Limit       int
-	TimeZone    string
-}
+// TaskFilter es un alias a domain.TaskFilter para mantener compatibilidad
+type TaskFilter = domain.TaskFilter

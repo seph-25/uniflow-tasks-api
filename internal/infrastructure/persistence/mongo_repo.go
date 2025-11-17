@@ -105,6 +105,11 @@ func (r *MongoTaskRepository) FindByFilter(ctx context.Context, filter ports.Tas
 		mongoFilter["priority"] = bson.M{"$in": filter.Priority}
 	}
 
+	// Filtro por tipo de tarea (assignment, exam, reading, etc.)
+	if len(filter.Type) > 0 {
+		mongoFilter["type"] = bson.M{"$in": filter.Type}
+	}
+
 	// Filtro por materia
 	if filter.SubjectID != "" {
 		mongoFilter["subjectId"] = filter.SubjectID

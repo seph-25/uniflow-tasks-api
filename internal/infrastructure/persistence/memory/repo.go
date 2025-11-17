@@ -131,13 +131,83 @@ func (r *Repo) Aggregated(ctx context.Context, userID string, until time.Time) (
 }
 
 func (r *Repo) FindByFilter(ctx context.Context, filter ports.TaskFilter) ([]domain.Task, domain.PageInfo, error) {
-	// Implementación simple: filtra por usuario y pagina en memoria
-	all, err := r.GetAll(ctx, filter.UserID)
-	if err != nil {
-		return nil, domain.PageInfo{}, err
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	// Obtener todas las tareas del usuario
+	all := make([]domain.Task, 0)
+	for _, t := range r.data {
+		if t.UserID == filter.UserID {
+			all = append(all, *t)
+		}
 	}
 
-	// paginación básica
+	// APLICAR FILTROS
+	filtered := make([]domain.Task, 0)
+	for _, t := range all {
+		// Filtro por status
+		if len(filter.Status) > 0 {
+			found := false
+			for _, s := range filter.Status {
+				if t.Status == s {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
+		// Filtro por priority
+		if len(filter.Priority) > 0 {
+			found := false
+			for _, p := range filter.Priority {
+				if t.Priority == p {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
+		// Filtro por type
+		if len(filter.Type) > 0 {
+			found := false
+			for _, tp := range filter.Type {
+				if t.Type == tp {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
+		// Filtro por subject
+		if filter.SubjectID != "" && t.SubjectID != filter.SubjectID {
+			continue
+		}
+
+		// Filtro por period
+		if filter.PeriodID != "" && t.PeriodID != filter.PeriodID {
+			continue
+		}
+
+		// Filtro por fecha vencida (isOverdue)
+		if filter.IsOverdue != nil && *filter.IsOverdue {
+			if t.DueDate.After(time.Now()) || t.Status == domain.StatusDone {
+				continue
+			}
+		}
+
+		filtered = append(filtered, t)
+	}
+
+	// PAGINACIÓN
 	page := filter.Page
 	if page <= 0 {
 		page = 1
@@ -148,17 +218,17 @@ func (r *Repo) FindByFilter(ctx context.Context, filter ports.TaskFilter) ([]dom
 	}
 
 	start := (page - 1) * limit
-	if start > len(all) {
-		start = len(all)
+	if start > len(filtered) {
+		start = len(filtered)
 	}
 	end := start + limit
-	if end > len(all) {
-		end = len(all)
+	if end > len(filtered) {
+		end = len(filtered)
 	}
 
-	slice := all[start:end]
+	slice := filtered[start:end]
 
-	total := int64(len(all))
+	total := int64(len(filtered))
 	totalPages := (total + int64(limit) - 1) / int64(limit)
 	pi := domain.PageInfo{
 		Total:      total,

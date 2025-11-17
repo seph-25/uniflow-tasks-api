@@ -54,6 +54,7 @@ type TaskFilter struct {
 	UserID      string    `form:"userId"`   // Obligatorio (viene del JWT)
 	Status      []string  `form:"status"`   // Ej: "todo,in-progress"
 	Priority    []string  `form:"priority"` // Ej: "high,urgent"
+	Type        []string  `form:"type"`     // Ej: "exam,quiz"
 	SubjectID   string    `form:"subjectId"`
 	PeriodID    string    `form:"periodId"`
 	DueDateFrom time.Time `form:"dueDateFrom"` // ISO 8601
