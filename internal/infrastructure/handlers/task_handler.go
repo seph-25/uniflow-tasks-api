@@ -243,7 +243,7 @@ func (th *TaskHandler) UpdateTaskStatus(c *gin.Context) {
 		task.CompletedAt = &now
 	}
 
-	if err := th.taskService.UpdateTask(ctx, task); err != nil {
+	if err := th.taskService.UpdateTaskStatus(ctx, task); err != nil {
 		c.JSON(http.StatusConflict, NewErrorResponse("CONFLICT", err.Error()))
 		return
 	}
@@ -302,7 +302,7 @@ func (th *TaskHandler) CompleteTask(c *gin.Context) {
 	task.CompletedAt = &now
 	task.UpdatedAt = now
 
-	if err := th.taskService.UpdateTask(ctx, task); err != nil {
+	if err := th.taskService.UpdateTaskStatus(ctx, task); err != nil {
 		c.JSON(http.StatusConflict, NewErrorResponse("CONFLICT", err.Error()))
 		return
 	}

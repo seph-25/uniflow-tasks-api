@@ -198,6 +198,29 @@ func (ts *TaskService) UpdateTask(ctx context.Context, task *domain.Task) error 
 	return nil
 }
 
+// UpdateTaskStatus actualiza solo el status de una tarea (sin validar CanBeModified)
+func (ts *TaskService) UpdateTaskStatus(ctx context.Context, task *domain.Task) error {
+	ctx = ensureContext(ctx)
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	// Solo validar estructura, NO validar CanBeModified (permite marcar como completada)
+	if err := task.IsValid(); err != nil {
+		return err
+	}
+
+	// Persistir cambios
+	err := ts.repo.Update(ctx, task)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // DeleteTask elimina una tarea
 func (ts *TaskService) DeleteTask(ctx context.Context, taskID, userID string) error {
 	ctx = ensureContext(ctx)
