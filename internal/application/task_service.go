@@ -137,18 +137,16 @@ func (ts *TaskService) enqueueDeadlineReminder(ctx context.Context, task *domain
 		visibilityTimeoutSeconds = 0
 	}
 
-	// Construir mensaje de notificación y codificarlo en Base64
-	messageText := fmt.Sprintf("La tarea '%s' está próxima a vencerse. Faltan 3 días", task.Title)
-	messageBase64 := base64.StdEncoding.EncodeToString([]byte(messageText))
-
 	// Construir mensaje JSON (solo los campos que NestJS espera)
+	messageText := fmt.Sprintf("La tarea '%s' está próxima a vencerse. Faltan 3 días", task.Title)
+	
 	message := map[string]interface{}{
 		"taskId":   task.ID,
 		"userId":   userID,
 		"name":     userName,
 		"email":    userEmail,
 		"title":    task.Title,
-		"message":  messageBase64,
+		"message":  messageText,
 		"type":     "deadline_reminder",
 		"priority": task.Priority,
 	}
@@ -158,8 +156,11 @@ func (ts *TaskService) enqueueDeadlineReminder(ctx context.Context, task *domain
 		return fmt.Errorf("error al serializar mensaje: %w", err)
 	}
 
-	// Encolar mensaje
-	_, err = ts.queueClient.EnqueueMessage(ctx, string(messageJSON), &azqueue.EnqueueMessageOptions{
+	// Codificar TODO el mensaje en Base64
+	messageBase64 := base64.StdEncoding.EncodeToString(messageJSON)
+
+	// Encolar mensaje codificado en Base64
+	_, err = ts.queueClient.EnqueueMessage(ctx, messageBase64, &azqueue.EnqueueMessageOptions{
 		VisibilityTimeout: &visibilityTimeoutSeconds,
 	})
 	if err != nil {
