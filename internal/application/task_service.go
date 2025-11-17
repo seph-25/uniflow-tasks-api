@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -136,6 +137,10 @@ func (ts *TaskService) enqueueDeadlineReminder(ctx context.Context, task *domain
 		visibilityTimeoutSeconds = 0
 	}
 
+	// Construir mensaje de notificación y codificarlo en Base64
+	messageText := fmt.Sprintf("La tarea '%s' está próxima a vencerse. Faltan 3 días", task.Title)
+	messageBase64 := base64.StdEncoding.EncodeToString([]byte(messageText))
+
 	// Construir mensaje JSON (solo los campos que NestJS espera)
 	message := map[string]interface{}{
 		"taskId":   task.ID,
@@ -143,7 +148,7 @@ func (ts *TaskService) enqueueDeadlineReminder(ctx context.Context, task *domain
 		"name":     userName,
 		"email":    userEmail,
 		"title":    task.Title,
-		"message":  fmt.Sprintf("La tarea '%s' está próxima a vencerse. Faltan 3 días", task.Title),
+		"message":  messageBase64,
 		"type":     "deadline_reminder",
 		"priority": task.Priority,
 	}
