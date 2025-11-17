@@ -83,12 +83,7 @@ jobs:
           az containerapp update \
             --name ${{ secrets.CONTAINER_APP_NAME }} \
             --resource-group ${{ secrets.RESOURCE_GROUP }} \
-            --image ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            --set-env-vars \
-              PORT=8080 \
-              GIN_MODE=release \
-              MONGO_URI="${{ secrets.MONGO_URI }}" \
-              MONGO_DB="${{ secrets.MONGO_DB }}"
+            --image ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Verify deployment
         run: |
