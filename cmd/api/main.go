@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azqueue"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -41,6 +43,8 @@ func main() {
 	mongoURI := os.Getenv("MONGO_URI")
 	var repo ports.TaskRepository
 
+	queueClient := initQueueClient()
+
 	if mongoURI == "" {
 		log.Println("MONGO_URI no configurada → usando repositorio EN MEMORIA")
 		repo = mem.NewRepo()
@@ -66,9 +70,10 @@ func main() {
 
 		// Ping
 		if err := client.Ping(ctx, nil); err != nil {
+			log.Printf("Mongo URI: %v", mongoURI)
 			log.Fatalf("ERROR al hacer ping a MongoDB: %v", err)
 		}
-		log.Println("✅ Conectado a MongoDB")
+		log.Println("Conectado a MongoDB")
 
 		// Selección de colección y repo
 		coll := client.Database(mongoDB).Collection("tasks")
@@ -76,7 +81,7 @@ func main() {
 	}
 
 	// 5) Servicio + Router + Handlers
-	taskService := application.NewTaskService(repo)
+	taskService := application.NewTaskService(repo, queueClient)
 	r := gin.Default()
 
 	taskHandler := handlers.NewTaskHandler(taskService)
@@ -113,4 +118,46 @@ func main() {
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("ERROR al levantar servidor: %v", err)
 	}
+}
+
+// QueueClient singleton con lazy initialization
+var (
+	queueClient *azqueue.QueueClient
+	onceQueue   sync.Once
+)
+
+func initQueueClient() *azqueue.QueueClient {
+	onceQueue.Do(func() {
+		queueClient = createQueueConnection()
+		log.Println("QueueClient de Azure inicializado")
+	})
+	return queueClient
+}
+
+func createQueueConnection() *azqueue.QueueClient {
+	connectionString := os.Getenv("AZURE_STORAGE_CONNECTION_STRING")
+
+	if connectionString == "" {
+		log.Println("AZURE_STORAGE_CONNECTION_STRING no configurada - QueueClient no disponible")
+		return nil
+	}
+
+	queueName := os.Getenv("AZURE_STORAGE_QUEUE_NAME")
+	if queueName == "" {
+		log.Println("AZURE_STORAGE_QUEUE_NAME no configurada")
+		return nil
+	}
+
+	queueClient, err := azqueue.NewQueueClientFromConnectionString(
+		connectionString,
+		queueName,
+		nil,
+	)
+	if err != nil {
+		log.Printf("Error al crear queue client: %v", err)
+		return nil
+	}
+
+	log.Printf("QueueClient creado para cola: %s", queueName)
+	return queueClient
 }
