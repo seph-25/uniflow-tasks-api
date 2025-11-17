@@ -241,3 +241,90 @@ func (r *Repo) FindByFilter(ctx context.Context, filter ports.TaskFilter) ([]dom
 
 	return slice, pi, nil
 }
+
+// GetDashboardStats implementa el método del repositorio para memoria
+func (r *Repo) GetDashboardStats(ctx context.Context, userID string) (domain.DashboardData, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	result := domain.DashboardData{
+		UpcomingTasks:     make([]domain.DashboardTask, 0),
+		TodayTasks:        make([]domain.DashboardTask, 0),
+		OverdueCount:      0,
+		TotalPending:      0,
+		CompletedThisWeek: 0,
+		InProgressCount:   0,
+		TodoCount:         0,
+	}
+
+	now := time.Now()
+	weekAgo := now.AddDate(0, 0, -7)
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	endOfDay := startOfDay.Add(24 * time.Hour)
+
+	// Recolectar tareas del usuario
+	var userTasks []domain.Task
+	for _, t := range r.data {
+		if t.UserID == userID {
+			userTasks = append(userTasks, *t)
+		}
+	}
+
+	// Procesar tareas
+	for _, t := range userTasks {
+		// Contar por estado
+		if t.Status == domain.StatusTodo {
+			result.TodoCount++
+			result.TotalPending++
+		} else if t.Status == domain.StatusInProgress {
+			result.InProgressCount++
+			result.TotalPending++
+		}
+
+		// Completadas esta semana
+		if t.Status == domain.StatusDone && t.CompletedAt != nil {
+			if t.CompletedAt.After(weekAgo) {
+				result.CompletedThisWeek++
+			}
+		}
+
+		// Vencidas
+		if t.DueDate.Before(now) && t.Status != domain.StatusDone {
+			result.OverdueCount++
+		}
+
+		// Hoy
+		if t.DueDate.After(startOfDay) && t.DueDate.Before(endOfDay) {
+			task := taskToDashboardTask(&t)
+			result.TodayTasks = append(result.TodayTasks, task)
+		}
+
+		// Próximas (no completadas, después de hoy)
+		if t.DueDate.After(now) && t.Status != domain.StatusDone {
+			task := taskToDashboardTask(&t)
+			result.UpcomingTasks = append(result.UpcomingTasks, task)
+		}
+	}
+
+	// Limitar a 5 próximas
+	if len(result.UpcomingTasks) > 5 {
+		result.UpcomingTasks = result.UpcomingTasks[:5]
+	}
+
+	return result, nil
+}
+
+// Helper: convertir Task a DashboardTask
+func taskToDashboardTask(t *domain.Task) domain.DashboardTask {
+	return domain.DashboardTask{
+		ID:           t.ID,
+		Title:        t.Title,
+		SubjectName:  "",
+		SubjectCode:  "",
+		SubjectColor: "",
+		DueDate:      t.DueDate.Format("2006-01-02T15:04:05Z07:00"),
+		Priority:     t.Priority,
+		Status:       t.Status,
+		Type:         t.Type,
+	}
+}

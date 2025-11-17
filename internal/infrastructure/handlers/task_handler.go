@@ -527,3 +527,31 @@ func (th *TaskHandler) GetByPeriod(c *gin.Context) {
 		"count":    len(taskDTOs),
 	})
 }
+
+// GetDashboard maneja GET /tasks/dashboard
+func (th *TaskHandler) GetDashboard(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("UNAUTHORIZED", "userID not found in context (middleware failed)"))
+		return
+	}
+
+	// limit es opcional, default 5
+	limitStr := c.DefaultQuery("limit", "5")
+	limit := 5
+	if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+		limit = l
+	}
+	_ = limit // Por ahora no se usa en los datos, pero está para futuro
+
+	dashboard, err := th.taskService.GetDashboard(ctx, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse("INTERNAL_ERROR", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, dashboard)
+}

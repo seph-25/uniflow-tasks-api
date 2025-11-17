@@ -96,6 +96,7 @@ func main() {
 	r.GET("/tasks/search", taskHandler.SearchTasks)
 	r.GET("/tasks/overdue", taskHandler.GetOverdue)
 	r.GET("/tasks/completed", taskHandler.GetCompleted)
+	r.GET("/tasks/dashboard", taskHandler.GetDashboard)
 	r.GET("/tasks/by-subject/:subjectId", taskHandler.GetBySubject)
 	r.GET("/tasks/by-period/:periodId", taskHandler.GetByPeriod)
 

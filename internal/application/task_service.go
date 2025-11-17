@@ -166,3 +166,20 @@ func (ts *TaskService) GetTasksFiltered(ctx context.Context, filter ports.TaskFi
 
 	return tasks, pageInfo, nil
 }
+
+// GetDashboard retorna datos agregados para el dashboard
+func (ts *TaskService) GetDashboard(ctx context.Context, userID string) (*domain.DashboardData, error) {
+	ctx = ensureContext(ctx)
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	data, err := ts.repo.GetDashboardStats(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &data, nil
+}

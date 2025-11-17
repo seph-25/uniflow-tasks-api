@@ -325,6 +325,147 @@ func (r *MongoTaskRepository) Aggregated(ctx context.Context, userID string, unt
 	return domain.Stats{}, nil
 }
 
+// GetDashboardStats retorna estadísticas agregadas para el dashboard
+func (r *MongoTaskRepository) GetDashboardStats(ctx context.Context, userID string) (domain.DashboardData, error) {
+	result := domain.DashboardData{
+		UpcomingTasks:     make([]domain.DashboardTask, 0),
+		TodayTasks:        make([]domain.DashboardTask, 0),
+		OverdueCount:      0,
+		TotalPending:      0,
+		CompletedThisWeek: 0,
+		InProgressCount:   0,
+		TodoCount:         0,
+	}
+
+	now := time.Now()
+	weekAgo := now.AddDate(0, 0, -7)
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	endOfDay := startOfDay.Add(24 * time.Hour)
+
+	// ===== TAREAS PRÓXIMAS (Upcoming) =====
+	upcomingFilter := bson.M{
+		"userId":  userID,
+		"dueDate": bson.M{"$gt": now},
+		"status":  bson.M{"$ne": domain.StatusDone},
+	}
+	opts := options.Find()
+	opts.SetSort(bson.M{"dueDate": 1})
+	opts.SetLimit(5)
+
+	cursor, err := r.collection.Find(ctx, upcomingFilter, opts)
+	if err != nil {
+		return result, fmt.Errorf("error al obtener tareas próximas: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var upcomingTasks []domain.Task
+	if err = cursor.All(ctx, &upcomingTasks); err != nil {
+		return result, fmt.Errorf("error al decodificar tareas próximas: %w", err)
+	}
+
+	for _, t := range upcomingTasks {
+		result.UpcomingTasks = append(result.UpcomingTasks, taskToDashboardTaskMongo(&t))
+	}
+
+	// ===== TAREAS HOY =====
+	todayFilter := bson.M{
+		"userId": userID,
+		"dueDate": bson.M{
+			"$gte": startOfDay,
+			"$lt":  endOfDay,
+		},
+	}
+	cursor, err = r.collection.Find(ctx, todayFilter)
+	if err != nil {
+		return result, fmt.Errorf("error al obtener tareas de hoy: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var todayTasks []domain.Task
+	if err = cursor.All(ctx, &todayTasks); err != nil {
+		return result, fmt.Errorf("error al decodificar tareas de hoy: %w", err)
+	}
+
+	for _, t := range todayTasks {
+		result.TodayTasks = append(result.TodayTasks, taskToDashboardTaskMongo(&t))
+	}
+
+	// ===== CONTEOS AGREGADOS =====
+	// Vencidas
+	overdueFilter := bson.M{
+		"userId":  userID,
+		"dueDate": bson.M{"$lt": now},
+		"status":  bson.M{"$ne": domain.StatusDone},
+	}
+	overdueCount, err := r.collection.CountDocuments(ctx, overdueFilter)
+	if err != nil {
+		return result, fmt.Errorf("error al contar vencidas: %w", err)
+	}
+	result.OverdueCount = int(overdueCount)
+
+	// Pendientes (todo + in-progress)
+	pendingFilter := bson.M{
+		"userId": userID,
+		"status": bson.M{"$in": []string{domain.StatusTodo, domain.StatusInProgress}},
+	}
+	pendingCount, err := r.collection.CountDocuments(ctx, pendingFilter)
+	if err != nil {
+		return result, fmt.Errorf("error al contar pendientes: %w", err)
+	}
+	result.TotalPending = int(pendingCount)
+
+	// Completadas esta semana
+	completedWeekFilter := bson.M{
+		"userId":      userID,
+		"status":      domain.StatusDone,
+		"completedAt": bson.M{"$gte": weekAgo},
+	}
+	completedWeekCount, err := r.collection.CountDocuments(ctx, completedWeekFilter)
+	if err != nil {
+		return result, fmt.Errorf("error al contar completadas esta semana: %w", err)
+	}
+	result.CompletedThisWeek = int(completedWeekCount)
+
+	// In-progress
+	inProgressFilter := bson.M{
+		"userId": userID,
+		"status": domain.StatusInProgress,
+	}
+	inProgressCount, err := r.collection.CountDocuments(ctx, inProgressFilter)
+	if err != nil {
+		return result, fmt.Errorf("error al contar in-progress: %w", err)
+	}
+	result.InProgressCount = int(inProgressCount)
+
+	// Todo
+	todoFilter := bson.M{
+		"userId": userID,
+		"status": domain.StatusTodo,
+	}
+	todoCount, err := r.collection.CountDocuments(ctx, todoFilter)
+	if err != nil {
+		return result, fmt.Errorf("error al contar todo: %w", err)
+	}
+	result.TodoCount = int(todoCount)
+
+	return result, nil
+}
+
+// Helper: convertir Task a DashboardTask para MongoDB
+func taskToDashboardTaskMongo(t *domain.Task) domain.DashboardTask {
+	return domain.DashboardTask{
+		ID:           t.ID,
+		Title:        t.Title,
+		SubjectName:  "",
+		SubjectCode:  "",
+		SubjectColor: "",
+		DueDate:      t.DueDate.Format("2006-01-02T15:04:05Z07:00"),
+		Priority:     t.Priority,
+		Status:       t.Status,
+		Type:         t.Type,
+	}
+}
+
 // Helper: validar status
 func isValidStatus(status string) bool {
 	validStatuses := []string{

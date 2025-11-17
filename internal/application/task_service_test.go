@@ -67,6 +67,18 @@ func (m *mockRepository) Aggregated(ctx context.Context, userID string, until ti
 	return domain.Stats{}, nil
 }
 
+func (m *mockRepository) GetDashboardStats(ctx context.Context, userID string) (domain.DashboardData, error) {
+	return domain.DashboardData{
+		UpcomingTasks:     make([]domain.DashboardTask, 0),
+		TodayTasks:        make([]domain.DashboardTask, 0),
+		OverdueCount:      0,
+		TotalPending:      0,
+		CompletedThisWeek: 0,
+		InProgressCount:   0,
+		TodoCount:         0,
+	}, nil
+}
+
 func TestGetAllTasks(t *testing.T) {
 	repo := &mockRepository{
 		tasks: map[string][]domain.Task{

@@ -44,6 +44,9 @@ type TaskRepository interface {
 	// podés devolver valores en cero y null.
 	Aggregated(ctx context.Context, userID string, until time.Time) (domain.Stats, error)
 
+	// GetDashboardStats retorna estadísticas para el dashboard
+	GetDashboardStats(ctx context.Context, userID string) (domain.DashboardData, error)
+
 	FindByFilter(ctx context.Context, filter TaskFilter) ([]domain.Task, domain.PageInfo, error)
 }
 

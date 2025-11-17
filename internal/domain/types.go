@@ -78,3 +78,27 @@ type PageInfo struct {
 	HasNext    bool
 	HasPrev    bool
 }
+
+// DashboardTask es una representación simplificada de Task para el dashboard
+type DashboardTask struct {
+	ID           string `json:"id"`
+	Title        string `json:"title"`
+	SubjectName  string `json:"subjectName"`
+	SubjectCode  string `json:"subjectCode"`
+	SubjectColor string `json:"subjectColor"`
+	DueDate      string `json:"dueDate"`
+	Priority     string `json:"priority"`
+	Status       string `json:"status"`
+	Type         string `json:"type"`
+}
+
+// DashboardData contiene toda la información del dashboard
+type DashboardData struct {
+	UpcomingTasks     []DashboardTask `json:"upcomingTasks"`
+	TodayTasks        []DashboardTask `json:"todayTasks"`
+	OverdueCount      int             `json:"overdueCount"`
+	TotalPending      int             `json:"totalPending"`
+	CompletedThisWeek int             `json:"completedThisWeek"`
+	InProgressCount   int             `json:"inProgressCount"`
+	TodoCount         int             `json:"todoCount"`
+}
