@@ -90,14 +90,14 @@ func TestGetAllTasks(t *testing.T) {
 					SubjectID: "subject-1",
 					Status:    domain.StatusTodo,
 				},
-			},
 		},
-	}
+	},
+}
 
-	service := NewTaskService(repo)
-	tasks, err := service.GetAllTasks(context.Background(), "user-1")
+service := NewTaskService(repo, nil)
+tasks, err := service.GetAllTasks(context.Background(), "user-1")
 
-	if err != nil {
+if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
@@ -108,7 +108,7 @@ func TestGetAllTasks(t *testing.T) {
 
 func TestCreateTask(t *testing.T) {
 	repo := &mockRepository{}
-	service := NewTaskService(repo)
+	service := NewTaskService(repo, nil)
 
 	task := &domain.Task{
 		Title:     "New Task",
@@ -119,7 +119,7 @@ func TestCreateTask(t *testing.T) {
 		UserID:    "user-1",
 	}
 
-	err := service.CreateTask(context.Background(), task)
+	err := service.CreateTask(context.Background(), task, "user-1", "Dev User", "dev@uniflow.edu")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}

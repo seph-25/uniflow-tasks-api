@@ -132,7 +132,10 @@ func (th *TaskHandler) CreateTask(c *gin.Context) {
 		UpdatedAt:          time.Now(),
 	}
 
-	if err := th.taskService.CreateTask(ctx, task); err != nil {
+	userName := c.GetHeader("X-User-Name")
+	userEmail := c.GetHeader("X-User-Email")
+
+	if err := th.taskService.CreateTask(ctx, task, userID, userName, userEmail); err != nil {
 		c.JSON(http.StatusBadRequest, NewErrorResponse("INVALID_TASK", err.Error()))
 		return
 	}

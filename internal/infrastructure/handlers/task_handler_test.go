@@ -27,7 +27,7 @@ func setupTestRouter() (*gin.Engine, *TaskHandler, *application.TaskService) {
 	})
 
 	repo := memory.NewRepo()
-	service := application.NewTaskService(repo)
+	service := application.NewTaskService(repo, nil)
 	handler := NewTaskHandler(service)
 
 	return r, handler, service
@@ -49,7 +49,7 @@ func TestGetTasksWithFilters(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	_ = service.CreateTask(context.Background(), task1)
+	_ = service.CreateTask(context.Background(), task1, "user-test", "Test User", "test@uniflow.edu")
 
 	// Registrar ruta
 	r.GET("/tasks", handler.GetTasks)

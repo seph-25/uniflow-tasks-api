@@ -2,9 +2,15 @@ package application
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"time"
 
 	"uniflow-api/internal/application/ports"
 	"uniflow-api/internal/domain"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azqueue"
 )
 
 //helper to ensure context is not nil
@@ -18,14 +24,16 @@ func ensureContext(ctx context.Context) context.Context {
 // TaskService coordina casos de uso relacionados con tareas
 // Ahora depende de una abstracción (TaskRepository) en lugar de datos hardcodeados
 type TaskService struct {
-	repo ports.TaskRepository
+	repo        ports.TaskRepository
+	queueClient *azqueue.QueueClient
 }
 
 // NewTaskService crea una nueva instancia de TaskService
-// Inyecta el repositorio (puede ser MongoDB, PostgreSQL, etc.)
-func NewTaskService(repo ports.TaskRepository) *TaskService {
+// Inyecta el repositorio (puede ser MongoDB, PostgreSQL, etc.) y opcionalmente un queueClient
+func NewTaskService(repo ports.TaskRepository, queueClient *azqueue.QueueClient) *TaskService {
 	return &TaskService{
-		repo: repo,
+		repo:        repo,
+		queueClient: queueClient,
 	}
 }
 
@@ -83,7 +91,7 @@ func (ts *TaskService) GetTasksByStatus(ctx context.Context, userID, status stri
 }
 
 // CreateTask crea una nueva tarea
-func (ts *TaskService) CreateTask(ctx context.Context, task *domain.Task) error {
+func (ts *TaskService) CreateTask(ctx context.Context, task *domain.Task, userID, userName, userEmail string) error {
 	ctx = ensureContext(ctx)
 	select {
 	case <-ctx.Done():
@@ -102,6 +110,60 @@ func (ts *TaskService) CreateTask(ctx context.Context, task *domain.Task) error 
 		return err
 	}
 
+	// Encolar mensaje de recordatorio si está disponible Azure Queue
+	if ts.queueClient != nil {
+		if err := ts.enqueueDeadlineReminder(ctx, task, userID, userName, userEmail); err != nil {
+			// Log pero no fallar la creación de tarea
+			log.Printf("⚠️ Error al encolar recordatorio para tarea %s: %v", task.ID, err)
+		}
+	}
+
+	return nil
+}
+
+// enqueueDeadlineReminder encola un mensaje para recordatorio de deadline
+func (ts *TaskService) enqueueDeadlineReminder(ctx context.Context, task *domain.Task, userID, userName, userEmail string) error {
+	// Calcular visibility timeout: 3 días antes del vencimiento
+	now := time.Now()
+	timeUntilDue := task.DueDate.Sub(now)
+	threeDays := 3 * 24 * time.Hour
+
+	var visibilityTimeoutSeconds int32
+	if timeUntilDue > threeDays {
+		visibilityTimeoutSeconds = int32((timeUntilDue - threeDays).Seconds())
+	} else {
+		// Si vence en menos de 3 días, hacer visible inmediatamente
+		visibilityTimeoutSeconds = 0
+	}
+
+	// Construir mensaje JSON
+	message := map[string]interface{}{
+		"taskId":    task.ID,
+		"userId":    userID,
+		"name":      userName,
+		"email":     userEmail,
+		"title":     task.Title,
+		"message":   fmt.Sprintf("La tarea '%s' está próxima a vencerse. Faltan 3 días", task.Title),
+		"type":      "deadline_reminder",
+		"priority":  task.Priority,
+		"dueDate":   task.DueDate.Format(time.RFC3339),
+		"createdAt": time.Now().Format(time.RFC3339),
+	}
+
+	messageJSON, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("error al serializar mensaje: %w", err)
+	}
+
+	// Encolar mensaje
+	_, err = ts.queueClient.EnqueueMessage(ctx, string(messageJSON), &azqueue.EnqueueMessageOptions{
+		VisibilityTimeout: &visibilityTimeoutSeconds,
+	})
+	if err != nil {
+		return fmt.Errorf("error al encolar mensaje: %w", err)
+	}
+
+	log.Printf("✅ Recordatorio encolado para tarea %s (visible en %.0f horas)", task.ID, float64(visibilityTimeoutSeconds)/3600)
 	return nil
 }
 

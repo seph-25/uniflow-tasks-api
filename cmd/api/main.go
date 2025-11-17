@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azqueue"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -75,23 +76,54 @@ func main() {
 		repo = persistence.NewMongoTaskRepository(coll)
 	}
 
-	// 5) Servicio + Router + Handlers
-	taskService := application.NewTaskService(repo)
+	// 5) Configurar Azure Queue Storage (opcional)
+	var queueClient *azqueue.QueueClient
+	azureStorageConnStr := os.Getenv("AZURE_STORAGE_CONNECTION_STRING")
+	queueName := os.Getenv("AZURE_STORAGE_QUEUE_NAME")
+	if queueName == "" {
+		queueName = "task-reminders" // default
+	}
+
+	if azureStorageConnStr != "" {
+		log.Println("Inicializando Azure Queue Storage...")
+		var err error
+		queueClient, err = azqueue.NewQueueClientFromConnectionString(azureStorageConnStr, queueName, nil)
+		if err != nil {
+			log.Printf("⚠️ Error al crear cliente de Azure Queue: %v (continuando sin recordatorios)", err)
+			queueClient = nil
+		} else {
+			// Crear la cola si no existe
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			_, err = queueClient.Create(ctx, nil)
+			if err != nil {
+				// Ignorar error si la cola ya existe
+				log.Printf("ℹ️ Cola '%s' ya existe o no se pudo crear (continuando): %v", queueName, err)
+			} else {
+				log.Printf("✅ Cola '%s' creada/verificada en Azure Queue Storage", queueName)
+			}
+		}
+	} else {
+		log.Println("ℹ️ AZURE_STORAGE_CONNECTION_STRING no configurada → recordatorios deshabilitados")
+	}
+
+	// 6) Servicio + Router + Handlers
+	taskService := application.NewTaskService(repo, queueClient)
 	r := gin.Default()
 
 	taskHandler := handlers.NewTaskHandler(taskService)
 
-	// 6) Rutas públicas (sin autenticación)
+	// 7) Rutas públicas (sin autenticación)
 	r.GET("/health", handlers.HealthHandler)
 
-	// 7) Middleware de autenticación (headers de API Management)
+	// 8) Middleware de autenticación (headers de API Management)
 	// En desarrollo, DevAuthBypass permite usar X-Dev-User-ID
 	if os.Getenv("GIN_MODE") == "debug" {
 		r.Use(middleware.DevAuthBypass())
 	}
 	r.Use(middleware.AuthMiddleware())
 
-	// 8) Rutas protegidas (requieren headers X-User-*)
+	// 9) Rutas protegidas (requieren headers X-User-*)
 	// Rutas específicas (deben ir primero para no colisionar con :id)
 	r.GET("/tasks/search", taskHandler.SearchTasks)
 	r.GET("/tasks/overdue", taskHandler.GetOverdue)
@@ -109,7 +141,7 @@ func main() {
 	r.PATCH("/tasks/:id/complete", taskHandler.CompleteTask)
 	r.DELETE("/tasks/:id", taskHandler.DeleteTask)
 
-	// 9) Levantar server
+	// 10) Levantar server
 	fmt.Printf("Servidor escuchando en puerto %s\n", port)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("ERROR al levantar servidor: %v", err)
