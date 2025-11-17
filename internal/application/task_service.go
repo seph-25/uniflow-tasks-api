@@ -136,18 +136,16 @@ func (ts *TaskService) enqueueDeadlineReminder(ctx context.Context, task *domain
 		visibilityTimeoutSeconds = 0
 	}
 
-	// Construir mensaje JSON
+	// Construir mensaje JSON (solo los campos que NestJS espera)
 	message := map[string]interface{}{
-		"taskId":    task.ID,
-		"userId":    userID,
-		"name":      userName,
-		"email":     userEmail,
-		"title":     task.Title,
-		"message":   fmt.Sprintf("La tarea '%s' está próxima a vencerse. Faltan 3 días", task.Title),
-		"type":      "deadline_reminder",
-		"priority":  task.Priority,
-		"dueDate":   task.DueDate.Format(time.RFC3339),
-		"createdAt": time.Now().Format(time.RFC3339),
+		"taskId":   task.ID,
+		"userId":   userID,
+		"name":     userName,
+		"email":    userEmail,
+		"title":    task.Title,
+		"message":  fmt.Sprintf("La tarea '%s' está próxima a vencerse. Faltan 3 días", task.Title),
+		"type":     "deadline_reminder",
+		"priority": task.Priority,
 	}
 
 	messageJSON, err := json.Marshal(message)
